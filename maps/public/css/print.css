@@ -1,9 +1,9 @@
-@font-face { font-family: 'Inter'; src: url('/fonts/inter.woff2') format('woff2'); font-weight: 100 900; }
+@font-face { font-family: 'Archivo'; src: url('/fonts/archivo.woff2') format('woff2'); font-weight: 100 900; font-stretch: 62% 125%; }
 * { box-sizing: border-box; }
-body { margin: 0; background: #f8f9fa; color: #202124; font: 500 14px/1.4 'Inter', sans-serif; }
+body { margin: 0; background: #f3f3ef; color: #141414; font: 500 14px/1.4 'Archivo', sans-serif; }
 p { margin: 0; }
 .print-toolbar { position: sticky; top: 0; display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 10px 16px; background: #fff; border-bottom: 1px solid #dadce0; z-index: 1; }
-.print-toolbar button { min-height: 40px; padding: 6px 18px; border: 0; border-radius: 12px; background: #1967d2; color: #fff; font: inherit; font-weight: 600; cursor: pointer; white-space: nowrap; }
+.print-toolbar button { min-height: 40px; padding: 6px 18px; border: 0; border-radius: 99px; background: #141414; color: #fff; font: inherit; font-weight: 600; cursor: pointer; white-space: nowrap; }
 .print-toolbar button[disabled] { opacity: .6; cursor: progress; }
 
 /* QR dan kode saja. Desain kartu dibuat terpisah, bagian ini tinggal ditempatkan vendor. */

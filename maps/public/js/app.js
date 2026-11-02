@@ -4,6 +4,7 @@ const view = document.getElementById('view');
 const dock = document.querySelector('.dock');
 const brand = document.body.dataset.brand;
 const TABS = ['beranda', 'masukan', 'kartu', 'atur'];
+const TONES = { beranda: 'yellow', masukan: 'blue', kartu: 'green', atur: 'red' };
 const DAY_NAMES = ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'];
 
 let me;
@@ -87,20 +88,23 @@ function reviewsPanel() {
   const form = business.reviewTracking ? '' : data
     ? `<details class="drawer"><summary>Perbarui angka</summary><p class="muted">Salin angka dari profil bisnis di Google Maps.</p>${reviewForm(true)}</details>`
     : `<p class="muted">Salin rating dan jumlah ulasan dari profil bisnis di Google Maps.</p>${reviewForm(false)}`;
-  const score = !data
-    ? (business.reviewTracking ? '<p class="muted">Angka pertama muncul setelah Google merespons.</p>' : '')
-    : `<div class="review-score">
-        ${data.rating ? `<b>${formatRating(data.rating)}</b>` : ''}
-        <div>
-          ${data.rating ? `<span class="star-track" role="img" aria-label="Rating ${formatRating(data.rating)} dari 5"><svg viewBox="0 0 120 22" aria-hidden="true"><use href="/icons.svg#stars5"/></svg><span class="star-fill" data-w="${Math.round((data.rating / 5) * 100)}"><svg viewBox="0 0 120 22" aria-hidden="true"><use href="/icons.svg#stars5"/></svg></span></span>` : ''}
-          <p class="review-count">${data.count.toLocaleString('id-ID')} ulasan</p>
-        </div>
-      </div>
-      <p class="muted">${data.source === 'google' ? 'Otomatis dari Google' : 'Diisi manual'}, ${formatDate(data.at)}.</p>`;
-  return `<section class="panel">
-    <div class="review-head"><svg viewBox="0 0 48 48" aria-hidden="true"><use href="/icons.svg#google-g"/></svg><h2>Ulasan Google</h2></div>
-    ${score}${form}
-  </section>`;
+  const head = '<div class="review-head"><svg viewBox="0 0 48 48" aria-hidden="true"><use href="/icons.svg#google-g"/></svg><h2>Ulasan Google</h2></div>';
+  if (!data) {
+    return `<section class="panel">
+      ${head}
+      ${business.reviewTracking ? '<p class="muted">Angka pertama muncul setelah Google merespons.</p>' : ''}
+      ${form}
+    </section>`;
+  }
+  return `<section class="folder score-card">
+      ${head}
+      ${data.rating ? `
+      <b class="review-score">${formatRating(data.rating)}</b>
+      <span class="star-track" role="img" aria-label="Rating ${formatRating(data.rating)} dari 5"><svg viewBox="0 0 120 22" aria-hidden="true"><use href="/icons.svg#stars5"/></svg><span class="star-fill" data-w="${Math.round((data.rating / 5) * 100)}"><svg viewBox="0 0 120 22" aria-hidden="true"><use href="/icons.svg#stars5"/></svg></span></span>` : ''}
+      <p class="review-count${data.rating ? '' : ' review-count-only'}">${data.count.toLocaleString('id-ID')} ulasan</p>
+      <p class="score-source">${data.source === 'google' ? 'Otomatis dari Google' : 'Diisi manual'}, ${formatDate(data.at)}</p>
+    </section>
+    ${form ? `<section class="panel">${form}</section>` : ''}`;
 }
 
 function renderBeranda() {
@@ -110,7 +114,7 @@ function renderBeranda() {
   const clicks = stats.reviewClicks ?? 0;
 
   view.innerHTML = `
-    <div class="topbar">
+    <div class="greet">
       <span class="business-name">${esc(business.name)}</span>
       <span class="plan-chip ${pro ? 'pro' : ''}">${business.isTrial ? 'Trial Pro' : pro ? 'Pro' : 'Basic'}</span>
     </div>
@@ -118,10 +122,10 @@ function renderBeranda() {
     <main class="wrap app-main stack">
       ${reviewsPanel()}
 
-      <div class="quick">
-        <a class="quick-item" href="${esc(business.reviewUrl)}" target="_blank" rel="noopener">${icon('open')}Uji tujuan</a>
-        <button class="quick-item" id="copy-link">${icon('copy')}Salin link</button>
-        <a class="quick-item" href="${esc(waUrl('', `Terima kasih sudah berkunjung ke ${business.name}. Bantu kami dengan memberi ulasan: ${firstCardUrl()}`))}" target="_blank" rel="noopener">${icon('share')}Kirim WA</a>
+      <div class="folders">
+        <a class="folder folder-link f-green" href="${esc(waUrl('', `Terima kasih sudah berkunjung ke ${business.name}. Bantu kami dengan memberi ulasan: ${firstCardUrl()}`))}" target="_blank" rel="noopener"><span>Kirim WA</span>${icon('share')}</a>
+        <button class="folder folder-link f-red" id="copy-link"><span>Salin link</span>${icon('copy')}</button>
+        <a class="folder folder-link f-blue" href="${esc(business.reviewUrl)}" target="_blank" rel="noopener"><span>Uji tujuan</span>${icon('open')}</a>
       </div>
 
       ${business.isTrial ? trialPanel() : ''}
@@ -374,6 +378,7 @@ function currentTab() {
 
 async function render() {
   const tab = currentTab();
+  document.body.dataset.tone = TONES[tab];
   dock.querySelectorAll('button').forEach((button) => {
     if (button.dataset.tab === tab) button.setAttribute('aria-current', 'page');
     else button.removeAttribute('aria-current');

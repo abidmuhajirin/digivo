@@ -290,10 +290,10 @@ function miniPage(business, card, source) {
 
   return `<!doctype html>
 <html lang="id"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#ffffff"><meta name="robots" content="noindex"><title>${esc(business.name)}</title>
+<meta name="theme-color" content="#f3f3ef"><meta name="robots" content="noindex"><title>${esc(business.name)}</title>
 <link rel="icon" href="/favicon.svg" type="image/svg+xml"><link rel="stylesheet" href="/css/app.css"></head>
 <body class="page-mini" data-code="${esc(card.code)}">
-<header class="sheet-mini">
+<header class="folder score-card sheet-mini">
   <div class="initial" aria-hidden="true">${esc(business.name.slice(0, 1).toUpperCase())}</div>
   <h1>${esc(business.name)}</h1>
   <p>${esc(business.tagline || 'Terima kasih sudah berkunjung.')}</p>

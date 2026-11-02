@@ -4,6 +4,7 @@ import { activationTicket, buyerFormFields, destinationNote, pinTicket, showResu
 const root = document.getElementById('admin');
 const dock = document.querySelector('.dock');
 const TABS = ['jual', 'kartu', 'reseller', 'bisnis'];
+const TONES = { jual: 'yellow', kartu: 'green', reseller: 'blue', bisnis: 'red' };
 const TITLES = { jual: 'Aktivasi pembeli', kartu: 'Stok kartu', reseller: 'Reseller', bisnis: 'Bisnis' };
 let overview;
 let result = '';
@@ -307,6 +308,7 @@ function bindBisnis() {
 
 function render() {
   const tab = currentTab();
+  document.body.dataset.tone = TONES[tab];
   dock.hidden = false;
   dock.querySelectorAll('button').forEach((button) => {
     if (button.dataset.tab === tab) button.setAttribute('aria-current', 'page');

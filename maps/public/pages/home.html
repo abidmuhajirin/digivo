@@ -3,11 +3,11 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#ffffff">
+<meta name="theme-color" content="#f3f3ef">
 <title>{{BRAND}} - Kartu ulasan Google untuk usaha Anda</title>
 <meta name="description" content="Kartu NFC dan QR yang membuka halaman ulasan Google dengan satu tempelan ponsel.">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
-<link rel="preload" href="/fonts/inter.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="/fonts/archivo.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="/css/app.css">
 </head>
 <body data-wa="{{ADMIN_WA}}">
@@ -17,14 +17,14 @@
     <a href="/kelola">Masuk</a>
   </nav>
   <div class="home-hero">
-    <div>
+    <div class="folder score-card hero-block">
       <h1>Satu tempelan, satu ulasan Google.</h1>
-      <p>Pelanggan puas sering lupa memberi ulasan. Dengan kartu ini, cukup tempelkan ponsel dan halaman ulasan bisnis Anda terbuka. Ponsel tanpa NFC tinggal memindai QR di sebelahnya.</p>
       <form class="code-form" id="code-form">
         <input name="code" aria-label="Kode kartu" placeholder="Kode di kartu" maxlength="10" autocomplete="off" required>
         <button class="btn" type="submit">Aktifkan</button>
       </form>
     </div>
+    <p class="hero-lede">Pelanggan puas sering lupa memberi ulasan. Dengan kartu ini, cukup tempelkan ponsel dan halaman ulasan bisnis Anda terbuka. Ponsel tanpa NFC tinggal memindai QR di sebelahnya.</p>
     <figure class="standee-hero">
       <div class="standee-face">
         <div class="standee-face-head">
@@ -48,20 +48,20 @@
 <main class="home-body">
   <section>
     <h2>Dari kotak sampai ulasan pertama</h2>
-    <div class="flow">
-      <article class="flow-step">
+    <div class="folders">
+      <article class="folder f-yellow flow-step">
         <div class="round"><svg class="i" aria-hidden="true"><use href="/icons.svg#card"/></svg></div>
         <div><h3>Aktifkan kartu</h3><p>Masukkan kode, tempel link Google Maps bisnis, buat PIN. Selesai dalam semenit.</p></div>
       </article>
-      <article class="flow-step">
+      <article class="folder f-green flow-step">
         <div class="round"><svg class="i" aria-hidden="true"><use href="/icons.svg#tap"/></svg></div>
         <div><h3>Letakkan di kasir</h3><p>Satu usaha bisa punya banyak kartu: per meja, per kasir, per cabang.</p></div>
       </article>
-      <article class="flow-step">
+      <article class="folder f-red flow-step">
         <div class="round"><svg class="i" aria-hidden="true"><use href="/icons.svg#open"/></svg></div>
         <div><h3>Pelanggan menempel</h3><p>Tanpa instal aplikasi. Google terbuka dan pelanggan tinggal menulis.</p></div>
       </article>
-      <article class="flow-step">
+      <article class="folder f-blue flow-step">
         <div class="round"><svg class="i" aria-hidden="true"><use href="/icons.svg#chat"/></svg></div>
         <div><h3>Pantau hasilnya</h3><p>Lihat rating dan jumlah ulasan, jumlah tap, jam ramai, dan pesan privat pelanggan.</p></div>
       </article>
@@ -71,7 +71,7 @@
   <section>
     <h2>Paket</h2>
     <div class="plans">
-      <article class="plan">
+      <article class="folder f-white plan">
         <h3>Basic</h3>
         <div class="plan-price">Rp99.000 <small>per kartu, sekali bayar</small></div>
         <ul>
@@ -83,7 +83,7 @@
         </ul>
         <a class="btn" data-wa-link="Halo, saya mau pesan kartu ulasan paket Basic." href="/kelola">Pesan via WhatsApp</a>
       </article>
-      <article class="plan plan-pro">
+      <article class="folder f-blue plan">
         <h3>Pro</h3>
         <div class="plan-price">Rp49.000 <small>per bulan</small></div>
         <ul>

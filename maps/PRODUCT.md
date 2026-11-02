@@ -17,4 +17,4 @@ Kartu fisik NFC + QR untuk usaha lokal Indonesia. Pelanggan menempelkan ponsel, 
 - Angka di dasbor hanya data nyata.
 
 ## Arah visual
-Sistem desain KasirBosku dengan tone warna Google. Lihat DESIGN.md.
+Folder warna bertumpuk dan blok warna penuh, memakai warna gradien empat sudut pilihan pemilik. Lihat DESIGN.md.

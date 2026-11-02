@@ -1,6 +1,6 @@
 # TapUlas — Design System
 
-> Mengikuti `DESIGN.md` KasirBosku (`D:\claude-worldAI\DESIGN.md`): tenang, cepat dibaca, garis tipis, angka rapi. Warnanya memakai tone Google.
+> Folder warna bertumpuk, blok warna penuh, huruf lebar, tombol pil gelap. Warna diambil dari gradien empat sudut pilihan pemilik: kuning, hijau, biru, merah.
 
 **Theme:** light · **Mode:** Operate, kecuali halaman depan (Persuade). Khusus ponsel, lebar kolom maksimal 480px.
 
@@ -10,46 +10,59 @@ Token ada di `:root`, `public/css/app.css`.
 
 | Token | Nilai | Dipakai untuk |
 |---|---|---|
-| `blue-700` | `#1967d2` | Tombol utama, tab aktif, link |
-| `blue-600` | `#1a73e8` | Logo, cincin fokus, batang grafik |
-| `blue-50` | `#e8f0fe` | Tombol lembut, latar pilihan aktif |
-| `yellow` | `#fbbc04` | Hanya bintang rating |
-| `green` / `green-50` | `#137333` / `#e6f4ea` | Berhasil, kartu aktif, pertambahan ulasan |
-| `red` / `red-50` | `#c5221f` / `#fce8e6` | Hapus, nonaktifkan, kosongkan |
-| `amber-50` / `amber-900` | `#fef7e0` / `#7a4f01` | Peringatan ringan |
-| `text` / `text-2` | `#202124` / `#5f6368` | Teks utama / keterangan |
-| `line` / `line-2` | `#dadce0` / `#bdc1c6` | Garis kartu / garis input |
-| `canvas` | `#f8f9fa` | Latar halaman, kartu putih di atasnya |
+| `yellow` | `#ffe500` | Folder, tombol sekunder, tab aktif di dock |
+| `green` | `#3dee1f` | Folder, tiket berhasil, pertambahan ulasan |
+| `blue` | `#0066ee` | Folder dengan teks putih, batang grafik |
+| `red` | `#ff2d1f` | Folder dengan teks gelap |
+| `mesh` | gradien empat sudut | Kartu rating, blok hero, kepala Minipage |
+| `ink` / `ink-2` | `#141414` / `#565656` | Teks, tombol utama, dock / keterangan |
+| `red-ink` / `green-ink` | `#c00f06` / `#0a6e22` | Teks bahaya dan berhasil di latar putih |
+| `yellow-50` | `#fff8b8` | Peringatan ringan, pesan belum dibaca |
+| `line` / `line-2` | `#e2e2dd` / `#8e8e88` | Garis antar baris / garis input |
+| `canvas` / `surface` | `#f3f3ef` / `#ffffff` | Latar halaman / panel |
 
-Merah hanya untuk tindakan yang menghapus atau mematikan. Hijau hanya untuk hasil berhasil. Jangan menambah warna aksen baru.
+Teks di kuning, hijau, dan merah selalu `ink`. Teks di biru selalu putih. Di `mesh`, teks kecil hanya di area atas yang kuning dan hijau. Di bagian biru dan merah, isi harus berada di atas pil putih atau pil gelap.
+
+## Warna per menu
+
+Bilah atas memakai `data-tone` di `body`, diatur dari JS per tab.
+
+| Panel | Kuning | Hijau | Biru | Merah |
+|---|---|---|---|---|
+| Pembeli | | Kartu | Masukan | Atur |
+| Admin | Aktivasi | Kartu | Reseller | Bisnis |
+| Reseller | Aktivasi | Stok | Riwayat | Akun |
 
 ## Tipografi
 
-Satu font: **Inter**, tersimpan di `public/fonts/inter.woff2`. Semua angka `tabular-nums`.
+Satu keluarga: **Archivo** variabel, tersimpan di `public/fonts/archivo.woff2`. Judul memakai lebar 125%, isi memakai lebar normal. Semua angka `tabular-nums`.
 
 | Peran | Ukuran | Tebal |
 |---|---|---|
-| Judul halaman depan | 36px | 700 |
-| Judul halaman | 16px di bilah atas | 600 |
-| Judul kartu | 16px | 600 |
-| Angka rating | 40px | 600 |
-| Angka statistik | 20–24px | 600 |
+| Judul halaman depan | 34px, lebar 125% | 800 |
+| Angka rating | 72px, lebar 125% | 700 |
+| Judul bilah atas | 21px, lebar 125% | 700 |
+| Judul panel | 18px, lebar 125% | 700 |
 | Isi, label, tombol | 14px | 400–600 |
 | Keterangan | 12px, tidak boleh lebih kecil | 400–500 |
 | Input | 16px, supaya iOS tidak memperbesar halaman | 400 |
 
-## Jarak dan bentuk
+## Bentuk
 
-Dasar 4px. Dalam kartu 16px, antar kartu 20px, antar field 12px, label ke input 6px.
+Dasar 4px. Antar panel 16px, antar field 12px, label ke input 6px.
 
 | Elemen | Tinggi | Radius |
 |---|---|---|
-| Input, select, tombol utama | 44px | 12px |
-| Tombol kecil | 36px | 8px |
-| Kartu | | 16px |
-| Label status | | penuh |
+| Tombol utama | 52px | penuh |
+| Tombol biasa | 44px | penuh |
+| Tombol kecil | 36px | penuh |
+| Input, select | 48px | 16px |
+| Panel, folder | | 24px |
+| Dock | | 30px |
 
-Kartu tanpa bayangan, cukup garis 1px. Kartu terpilih memakai garis plus `inset` 1px. Select digambar sendiri. Label tombol tidak boleh turun ke dua baris.
+**Folder** adalah ciri khas: badan warna dengan tab melengkung setinggi 26px. Kelas `.folder` memberi bentuk, `.f-yellow`, `.f-green`, `.f-red`, `.f-blue`, atau `.f-white` memberi warna. Di dalam `.folders`, tiap folder menimpa folder sebelumnya 14px. Saat ditekan folder turun, saat di-hover naik.
+
+Panel putih tanpa garis tepi. Dock berupa pil gelap mengambang. Select digambar sendiri. Label tombol tidak boleh turun ke dua baris.
 
 ## Gerak
 
@@ -57,7 +70,9 @@ Durasi 150–220ms, ease-out. Tanpa blur. Hover hanya untuk perangkat ber-mouse.
 
 ## Jangan
 
-- Jangan memakai gradien, teks bergradien, atau bayangan besar di kartu.
+- Jangan memakai teks bergradien, atau `mesh` di luar tiga tempat yang tertulis.
+- Jangan menaruh teks kecil langsung di bagian biru dan merah pada `mesh`.
 - Jangan memakai emoji sebagai ikon. Ikon dari `public/icons.svg`.
 - Jangan menulis teks di bawah 12px.
+- Jangan menambah warna aksen baru.
 - Jangan memakai warna kartu fisik di aplikasi. Desain kartu dibuat terpisah.

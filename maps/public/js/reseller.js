@@ -4,6 +4,7 @@ import { activationTicket, buyerFormFields, destinationNote, pinTicket, showResu
 const root = document.getElementById('reseller');
 const dock = document.querySelector('.dock');
 const TABS = ['aktivasi', 'stok', 'riwayat', 'akun'];
+const TONES = { aktivasi: 'yellow', stok: 'green', riwayat: 'blue', akun: 'red' };
 const TITLES = { aktivasi: 'Aktivasi pembeli', stok: 'Stok kartu', riwayat: 'Riwayat penjualan', akun: 'Akun' };
 const VIA = { reseller: 'Diaktifkan Anda', self: 'Diaktifkan pembeli', admin: 'Diaktifkan admin' };
 let data;
@@ -160,6 +161,7 @@ function bindAkun() {
 
 function render() {
   const tab = currentTab();
+  document.body.dataset.tone = TONES[tab];
   dock.hidden = false;
   dock.querySelectorAll('button').forEach((button) => {
     if (button.dataset.tab === tab) button.setAttribute('aria-current', 'page');
