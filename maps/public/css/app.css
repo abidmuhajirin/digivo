@@ -396,6 +396,8 @@ details.drawer[open] > summary { margin-bottom: 12px; }
 .admin-row { padding: 12px 0; display: grid; gap: 8px; }
 .admin-row + .admin-row { border-top: 1px solid var(--ink-4); }
 .admin-row small { display: block; color: var(--on-ink-2); font-size: .84rem; overflow-wrap: anywhere; }
+.ticket-note { margin-top: 14px; }
+.admin-row .drawer { font-size: .92rem; }
 .admin-actions { display: flex; flex-wrap: wrap; gap: 6px; }
 .mono { font-family: ui-monospace, Consolas, monospace; font-size: .84rem; letter-spacing: .02em; }
 .search { width: 100%; min-height: 46px; padding: 8px 14px; border-radius: 12px; border: 1.5px solid var(--ink-4); background: var(--ink-2); color: var(--on-ink); }

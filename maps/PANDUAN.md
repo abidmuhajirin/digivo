@@ -11,7 +11,9 @@ NFC dan QR tidak pernah berubah. Keduanya berisi link tetap:
 - NFC: `https://maps.digivo.biz.id/t/KODE`
 - QR: `https://maps.digivo.biz.id/q/KODE`
 
-Saat dibuka, server mengecek kartu. Kartu kosong diarahkan ke aktivasi. Kartu aktif diarahkan ke Google. Yang berubah setelah aktivasi hanya catatan di database, jadi kartu fisik tidak perlu ditulis ulang.
+Saat dibuka, server mengecek kartu. Kartu belum terjual diarahkan ke tujuan bawaan, atau ke aktivasi kalau tujuan bawaan belum diatur. Kartu aktif diarahkan ke Google. Yang berubah hanya catatan di database, jadi kartu fisik tidak perlu ditulis ulang.
+
+**Jangan pernah menulis link `maps.app.goo.gl` langsung ke chip atau QR.** Link itu tidak bisa diganti dari dashboard, sehingga kartu tidak bisa dijual ke pembeli lain. Chip dan QR harus berisi link dari CSV vendor. Link Google hanya dimasukkan di `/admin`.
 
 ## Di mana data tersimpan
 
@@ -34,10 +36,15 @@ Perintah itu membuat `backup.sql`. Simpan di luar komputer ini. Kehilangan datab
 
 ## Menyelesaikan deploy
 
-Worker dan database sudah dibuat. Tersisa tiga langkah, jalankan berurutan.
+Worker dan database sudah dibuat, dan record CNAME `maps` lama sudah dihapus. Jalankan berurutan dari folder proyek.
 
-1. Di dashboard Cloudflare, buka `digivo.biz.id`, lalu **DNS > Records**. Hapus record CNAME `maps` yang mengarah ke `abidmuhajirin.github.io`.
-2. Deploy dari folder proyek. Cloudflare membuat DNS `maps` dan sertifikat HTTPS otomatis:
+1. Perbarui tabel database. Perintah ini aman diulang:
+
+```bash
+npm run db:init
+```
+
+2. Deploy. Cloudflare membuat DNS `maps` dan sertifikat HTTPS otomatis:
 
 ```bash
 npx wrangler deploy
@@ -86,11 +93,14 @@ Masuk ke akun demo lokal di `/kelola` dengan kode `DEMOKP1` dan PIN `482915`. Da
 
 ## Alur penjual
 
-1. Buka `/admin`, buat batch, misalnya 100 kartu.
-2. Unduh **CSV vendor**. Kolom `url_nfc` ditulis ke chip, kolom `url_qr` dicetak sebagai QR. Tombol **Lembar cetak** berguna untuk contoh dan produksi kecil.
+1. Buka `/admin`. Di **Tujuan kartu belum terjual**, tempel link Maps contoh, misalnya Malioboro. Semua kartu belum terjual langsung mengarah ke sana untuk demo.
+2. Buat batch, misalnya 100 kartu, lalu unduh **CSV vendor**. Kolom `url_nfc` ditulis ke chip, kolom `url_qr` dicetak sebagai QR. Tombol **Lembar cetak** berguna untuk contoh dan produksi kecil.
 3. Minta vendor **mengunci chip (lock) setelah ditulis**. Chip yang tidak dikunci bisa ditimpa orang iseng dengan aplikasi NFC gratis.
 4. Sertakan **lembar aktivasi** di setiap kemasan, bukan dicetak di kartu. Kode aktivasi mencegah orang lain mengklaim kartu lebih dulu.
-5. Pembeli upgrade lewat WhatsApp. Setelah bayar, buka `/admin`, cari bisnisnya, tekan `+1 bln` atau `+12 bln`.
+5. Ada pembeli: di **Atur kartu untuk pembeli**, isi kode kartu, nama bisnis, dan link Google Maps-nya. Kartu langsung mengarah ke bisnis itu dan mendapat trial Pro 7 hari.
+6. Berikan kode kartu dan PIN yang muncul ke pembeli. PIN hanya tampil sekali. Kalau hilang, pembeli memakai Lupa PIN dengan kode aktivasi.
+7. Salah link atau pindah lokasi: di daftar **Bisnis**, buka **Ganti nama atau link**.
+8. Pembeli upgrade lewat WhatsApp. Setelah bayar, cari bisnisnya, tekan `+1 bln` atau `+12 bln`.
 
 Panel admin dan aplikasi khusus ponsel, tetapi cetak lembar A4 lebih nyaman dari komputer.
 
@@ -106,7 +116,9 @@ Panel admin dan aplikasi khusus ponsel, tetapi cetak lembar A4 lebih nyaman dari
 
 ## Alur pemilik usaha
 
-1. Tempelkan ponsel ke kartu baru atau buka halaman depan dan masukkan kode.
+Kalau pembeli mengaktifkan sendiri, bukan lewat admin:
+
+1. Buka halaman depan dan masukkan kode kartu. Kalau tujuan bawaan belum diatur, tempelkan ponsel ke kartu juga bisa.
 2. Isi kode aktivasi, nama bisnis, link Google Maps, dan PIN 6 angka.
 3. Kartu aktif. Tempelkan lagi untuk menguji.
 4. Kelola di `/kelola` dengan kode kartu dan PIN.

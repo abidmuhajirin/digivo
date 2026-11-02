@@ -181,6 +181,47 @@ test('link pendek yang keluar dari Google atau gagal dibuka ditolak', async () =
   assert.equal((await resolveLink('https://maps.app.goo.gl/abc', { fetchImpl: broken })).ok, false);
 });
 
+test('admin: tujuan bawaan kartu kosong, aktivasi pembeli, lalu ganti link', async () => {
+  const login = await call('/api/admin/login', { method: 'POST', body: { password: 'sandi-uji' } });
+  const cookie = login.headers.get('set-cookie').split(';')[0];
+  const card = cards[15];
+  const demo = 'https://g.page/r/CMALIOBORO/review';
+
+  assert.equal((await call('/api/admin/default-link', { method: 'PUT', body: { link: demo } })).status, 401);
+  const bad = await call('/api/admin/default-link', { method: 'PUT', cookie, body: { link: 'https://penipuan.example' } });
+  assert.equal(bad.status, 400);
+
+  await call('/api/admin/default-link', { method: 'PUT', cookie, body: { link: demo } });
+  const blank = await call(`/t/${card.code}`);
+  assert.equal(blank.headers.get('location'), demo);
+  assert.equal(blank.headers.get('cache-control'), 'no-store');
+  assert.equal(db.sqlite.prepare('SELECT COUNT(*) n FROM events WHERE card_id = ?').get(card.id).n, 0);
+  assert.equal((await call(`/aktivasi/${card.code}`)).status, 200, 'aktivasi mandiri tetap bisa');
+
+  assert.equal((await call('/api/admin/activate', { method: 'POST', body: { code: card.code, name: 'X', link: REVIEW } })).status, 401);
+  const res = await call('/api/admin/activate', {
+    method: 'POST', cookie, body: { code: card.code, name: 'Toko Pembeli', link: REVIEW, reviewCount: '9' },
+  });
+  const activated = await res.json();
+  assert.match(activated.pin, /^\d{6}$/);
+  assert.equal(activated.trial, true);
+  assert.equal((await call(`/t/${card.code}`)).headers.get('location'), REVIEW);
+
+  const owner = await call('/api/login', { method: 'POST', body: { code: card.code, pin: activated.pin } });
+  assert.equal(owner.status, 200);
+  const again = await call('/api/admin/activate', { method: 'POST', cookie, body: { code: card.code, name: 'Lain', link: REVIEW } });
+  assert.equal(again.status, 409);
+
+  const { business_id: id } = db.sqlite.prepare('SELECT business_id FROM cards WHERE code = ?').get(card.code);
+  const next = 'https://g.page/r/CBARU123/review';
+  await call(`/api/admin/businesses/${id}`, { method: 'PUT', cookie, body: { name: 'Toko Pembeli', link: next } });
+  assert.equal((await call(`/q/${card.code}`)).headers.get('location'), next);
+  assert.equal(db.sqlite.prepare('SELECT COUNT(*) n FROM review_snapshots WHERE business_id = ?').get(id).n, 0);
+
+  await call('/api/admin/default-link', { method: 'PUT', cookie, body: { link: '' } });
+  assert.equal((await call(`/t/${cards[0].code}`)).headers.get('location'), `/aktivasi/${cards[0].code}`);
+});
+
 test('kartu kosong diarahkan ke aktivasi, kode salah ditolak', async () => {
   const res = await call(`/t/${cards[0].code}`);
   assert.equal(res.status, 302);

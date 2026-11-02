@@ -2,7 +2,7 @@ import { Hono } from 'hono';
 import { deleteCookie, getCookie, setCookie } from 'hono/cookie';
 import { createBatch, normalizeCode } from './db.js';
 import {
-  allow, createSession, destroySession, hashPin, pinProblem, readSession, safeEqual, verifyPin,
+  allow, createSession, destroySession, hashPin, pinProblem, randomPin, readSession, safeEqual, verifyPin,
 } from './security.js';
 import { fetchPlaceStats, resolveLink, reviewUrlForPlace, searchPlaces } from './google.js';
 import { cardUrls, renderPrintSheet } from './print.js';
@@ -123,6 +123,32 @@ function publicBusiness(c, business) {
   };
 }
 
+const defaultDestination = async (c) => (await first(c, "SELECT value FROM settings WHERE key = 'default_url'"))?.value ?? null;
+
+// Dipakai aktivasi oleh pemilik dan oleh admin, supaya trial dan titik awal Before-After selalu sama.
+async function activateCard(c, card, { name, target, pin, baseline }) {
+  // Trial hanya sekali per kartu, supaya reset tidak jadi jalan memperpanjang Pro.
+  const trial = !card.trial_used;
+  const now = Date.now();
+  const inserted = await run(c, `
+    INSERT INTO businesses (name, review_url, link_kind, place_id, pin_hash, plan, pro_until, is_trial, created_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    name, target.url, target.kind, target.placeId ?? null, await hashPin(pin, iterations(c)),
+    trial ? 'pro' : 'basic', trial ? now + TRIAL_DAYS * DAY : null, trial ? 1 : 0, now);
+  const businessId = inserted.meta.last_row_id;
+  await run(c, 'UPDATE cards SET business_id = ?, activated_at = ?, trial_used = 1 WHERE id = ?', businessId, now, card.id);
+
+  const tracked = await snapshotFromGoogle(c, businessId, target.placeId);
+  if (!tracked && baseline) await insertSnapshot(c, businessId, baseline.count, baseline.rating, 'manual');
+  return { businessId, trial };
+}
+
+// Tujuan baru berarti tempat lain, jadi angka Before lama tidak bisa dibandingkan.
+async function resetBeforeAfter(c, businessId, placeId) {
+  await run(c, 'DELETE FROM review_snapshots WHERE business_id = ?', businessId);
+  await snapshotFromGoogle(c, businessId, placeId);
+}
+
 async function requireOwner(c, next) {
   const session = await readSession(c.env.DB, getCookie(c, OWNER_COOKIE), 'owner');
   const business = session && await businessById(c, session.business_id);
@@ -218,7 +244,11 @@ export function createApp() {
   const handleTap = (source) => async (c) => {
     const card = await cardByCode(c, c.req.param('code'));
     if (!card) return sendPage(c, 'not-found.html', 404);
-    if (!card.business_id) return c.redirect(`/aktivasi/${card.code}`, 302);
+    if (!card.business_id) {
+      // Kartu belum terjual ikut tujuan bawaan. Aktivasi mandiri tetap lewat halaman depan dengan kode kartu.
+      c.header('Cache-Control', 'no-store');
+      return c.redirect(await defaultDestination(c) ?? `/aktivasi/${card.code}`, 302);
+    }
 
     const business = await businessById(c, card.business_id);
     if (!isDuplicateTap(c, card.id, source)) await logEvent(c, card, 'tap', source);
@@ -320,19 +350,7 @@ export function createApp() {
     const target = await destination(c, { link, placeId });
     if (!target.ok) return c.json({ error: target.error }, 400);
 
-    // Trial hanya sekali per kartu, supaya reset tidak jadi jalan memperpanjang Pro.
-    const trial = !card.trial_used;
-    const now = Date.now();
-    const inserted = await run(c, `
-      INSERT INTO businesses (name, review_url, link_kind, place_id, pin_hash, plan, pro_until, is_trial, created_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      cleanName, target.url, target.kind, target.placeId ?? null, await hashPin(pin, iterations(c)),
-      trial ? 'pro' : 'basic', trial ? now + TRIAL_DAYS * DAY : null, trial ? 1 : 0, now);
-    const businessId = inserted.meta.last_row_id;
-    await run(c, 'UPDATE cards SET business_id = ?, activated_at = ?, trial_used = 1 WHERE id = ?', businessId, now, card.id);
-
-    const tracked = await snapshotFromGoogle(c, businessId, target.placeId);
-    if (!tracked && baseline) await insertSnapshot(c, businessId, baseline.count, baseline.rating, 'manual');
+    const { businessId, trial } = await activateCard(c, card, { name: cleanName, target, pin, baseline });
 
     startCookie(c, OWNER_COOKIE, await createSession(c.env.DB, 'owner', businessId, 30 * DAY), 30 * DAY);
     return c.json({ ok: true, name: cleanName, kind: target.kind, reviewUrl: target.url, code: card.code, trial, trialDays: TRIAL_DAYS });
@@ -440,11 +458,7 @@ export function createApp() {
       await run(c, `UPDATE businesses SET ${keys.map((k) => `${k} = ?`).join(', ')} WHERE id = ?`,
         ...Object.values(updates), business.id);
     }
-    // Tujuan baru berarti tempat lain, jadi angka Before lama tidak bisa dibandingkan.
-    if (placeChanged) {
-      await run(c, 'DELETE FROM review_snapshots WHERE business_id = ?', business.id);
-      await snapshotFromGoogle(c, business.id, updates.place_id);
-    }
+    if (placeChanged) await resetBeforeAfter(c, business.id, updates.place_id);
     return c.json({ business: publicBusiness(c, await businessById(c, business.id)) });
   });
 
@@ -615,17 +629,67 @@ export function createApp() {
       pro: await count("SELECT COUNT(*) AS n FROM businesses WHERE plan = 'pro' AND is_trial = 0 AND is_demo = 0 AND (pro_until IS NULL OR pro_until > ?)", now),
       trials: await count("SELECT COUNT(*) AS n FROM businesses WHERE plan = 'pro' AND is_trial = 1 AND is_demo = 0 AND pro_until > ?", now),
       taps30: await count("SELECT COUNT(*) AS n FROM events WHERE type = 'tap' AND ts >= ?", since),
+      defaultUrl: await defaultDestination(c),
       batches: await all(c, `
         SELECT b.id, b.note, b.qty, b.created_at AS createdAt,
           (SELECT COUNT(*) FROM cards c WHERE c.batch_id = b.id AND c.business_id IS NOT NULL) AS activated
         FROM batches b ORDER BY b.id DESC LIMIT 50`),
       businessList: await all(c, `
-        SELECT b.id, b.name, b.plan, b.pro_until AS proUntil, b.is_trial AS isTrial, b.is_demo AS isDemo, b.created_at AS createdAt,
+        SELECT b.id, b.name, b.review_url AS reviewUrl, b.link_kind AS linkKind, b.plan, b.pro_until AS proUntil, b.is_trial AS isTrial, b.is_demo AS isDemo, b.created_at AS createdAt,
           (SELECT COUNT(*) FROM cards c WHERE c.business_id = b.id) AS cards,
           (SELECT GROUP_CONCAT(c.code, ' ') FROM cards c WHERE c.business_id = b.id) AS codes,
           (SELECT COUNT(*) FROM events e WHERE e.business_id = b.id AND e.type = 'tap' AND e.ts >= ?) AS taps30
         FROM businesses b ORDER BY b.created_at DESC LIMIT 500`, since),
     });
+  });
+
+  app.put('/api/admin/default-link', requireAdmin, async (c) => {
+    const { link } = await body(c);
+    if (!cleanText(link, 500)) {
+      await run(c, "DELETE FROM settings WHERE key = 'default_url'");
+      return c.json({ ok: true, url: null });
+    }
+    const target = await destination(c, { link });
+    if (!target.ok) return c.json({ error: target.error }, 400);
+    await run(c, `INSERT INTO settings (key, value) VALUES ('default_url', ?)
+      ON CONFLICT(key) DO UPDATE SET value = excluded.value`, target.url);
+    return c.json({ ok: true, url: target.url, kind: target.kind });
+  });
+
+  // Penjual mengatur kartu untuk pembeli. PIN hanya tampil sekali di sini, lalu diberikan ke pembeli.
+  app.post('/api/admin/activate', requireAdmin, async (c) => {
+    const input = await body(c);
+    const card = await cardByCode(c, input.code);
+    if (!card) return c.json({ error: 'Kode kartu tidak ditemukan.' }, 404);
+    if (card.business_id) return c.json({ error: 'Kartu ini sudah aktif. Ganti tujuannya di daftar Bisnis.' }, 409);
+    const name = cleanText(input.name, 80);
+    if (name.length < 2) return c.json({ error: 'Isi nama bisnis.' }, 400);
+    const baseline = cleanReviews(input);
+    if (baseline?.error) return c.json({ error: baseline.error }, 400);
+    const target = await destination(c, { link: input.link });
+    if (!target.ok) return c.json({ error: target.error }, 400);
+
+    const pin = randomPin();
+    const { trial } = await activateCard(c, card, { name, target, pin, baseline });
+    return c.json({ ok: true, code: card.code, name, pin, kind: target.kind, reviewUrl: target.url, trial, trialDays: TRIAL_DAYS });
+  });
+
+  app.put('/api/admin/businesses/:id', requireAdmin, async (c) => {
+    const business = await businessById(c, Number(c.req.param('id')));
+    if (!business) return c.json({ error: 'Bisnis tidak ditemukan.' }, 404);
+    const { name, link } = await body(c);
+    const cleanName = cleanText(name, 80);
+    if (cleanName.length < 2) return c.json({ error: 'Isi nama bisnis.' }, 400);
+    if (!link || link === business.review_url) {
+      await run(c, 'UPDATE businesses SET name = ? WHERE id = ?', cleanName, business.id);
+      return c.json({ ok: true, url: business.review_url, kind: business.link_kind });
+    }
+    const target = await destination(c, { link });
+    if (!target.ok) return c.json({ error: target.error }, 400);
+    await run(c, 'UPDATE businesses SET name = ?, review_url = ?, link_kind = ?, place_id = ? WHERE id = ?',
+      cleanName, target.url, target.kind, target.placeId ?? null, business.id);
+    await resetBeforeAfter(c, business.id, target.placeId);
+    return c.json({ ok: true, url: target.url, kind: target.kind });
   });
 
   app.post('/api/admin/batches', requireAdmin, async (c) => {

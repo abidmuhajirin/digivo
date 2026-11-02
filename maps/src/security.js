@@ -38,6 +38,14 @@ export function pinProblem(pin) {
   return null;
 }
 
+export function randomPin() {
+  while (true) {
+    const value = crypto.getRandomValues(new Uint32Array(1))[0] % 1_000_000;
+    const pin = String(value).padStart(6, '0');
+    if (!pinProblem(pin)) return pin;
+  }
+}
+
 const sessionHash = async (token) => toHex(await sha256(token));
 
 export async function createSession(db, kind, businessId, ttlMs) {
