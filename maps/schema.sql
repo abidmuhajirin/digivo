@@ -1,3 +1,14 @@
+CREATE TABLE IF NOT EXISTS resellers (
+  id INTEGER PRIMARY KEY,
+  name TEXT NOT NULL,
+  whatsapp TEXT NOT NULL UNIQUE,
+  city TEXT NOT NULL DEFAULT '',
+  pin_hash TEXT NOT NULL,
+  active INTEGER NOT NULL DEFAULT 1,
+  failed_pins INTEGER NOT NULL DEFAULT 0,
+  locked_until INTEGER NOT NULL DEFAULT 0,
+  created_at INTEGER NOT NULL
+);
 CREATE TABLE IF NOT EXISTS batches (
   id INTEGER PRIMARY KEY,
   note TEXT NOT NULL DEFAULT '',
@@ -22,6 +33,7 @@ CREATE TABLE IF NOT EXISTS businesses (
   locked_until INTEGER NOT NULL DEFAULT 0,
   is_demo INTEGER NOT NULL DEFAULT 0,
   is_trial INTEGER NOT NULL DEFAULT 0,
+  link_locked INTEGER NOT NULL DEFAULT 0,
   created_at INTEGER NOT NULL
 );
 CREATE TABLE IF NOT EXISTS cards (
@@ -33,10 +45,13 @@ CREATE TABLE IF NOT EXISTS cards (
   label TEXT NOT NULL DEFAULT '',
   activated_at INTEGER,
   trial_used INTEGER NOT NULL DEFAULT 0,
+  reseller_id INTEGER REFERENCES resellers(id),
+  activated_via TEXT,
   created_at INTEGER NOT NULL
 );
 CREATE INDEX IF NOT EXISTS cards_business ON cards(business_id);
 CREATE INDEX IF NOT EXISTS cards_batch ON cards(batch_id);
+CREATE INDEX IF NOT EXISTS cards_reseller ON cards(reseller_id);
 CREATE TABLE IF NOT EXISTS events (
   id INTEGER PRIMARY KEY,
   card_id INTEGER NOT NULL REFERENCES cards(id),

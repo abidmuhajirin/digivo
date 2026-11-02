@@ -47,6 +47,9 @@ lines.push(`INSERT INTO feedback (business_id, card_id, message, created_at) VAL
 lines.push(`INSERT INTO feedback (business_id, card_id, message, contact, created_at) VALUES (1, 100, 'Contoh pesan demo: mohon tambah pilihan pembayaran QRIS di kasir.', 'email@example.com', ${now - DAY});`);
 lines.push(`INSERT INTO review_snapshots (business_id, review_count, rating, source, taken_at) VALUES (1, 18, 4.3, 'manual', ${now - 30 * DAY}), (1, 63, 4.6, 'manual', ${now - DAY});`);
 
+lines.push(`INSERT INTO resellers (id, name, whatsapp, city, pin_hash, created_at) VALUES (1, 'Reseller Contoh', '6281200000000', 'Yogyakarta', ${quote(await hashPin(DEMO_PIN))}, ${now});`);
+lines.push('UPDATE cards SET reseller_id = 1 WHERE id IN (SELECT id FROM cards WHERE batch_id = 1 ORDER BY id LIMIT 4);');
+
 mkdirSync('.wrangler', { recursive: true });
 writeFileSync('.wrangler/seed.sql', lines.join('\n'));
-console.log(`Demo lokal: masuk di /kelola dengan kartu DEMOKP1 dan PIN ${DEMO_PIN}.`);
+console.log(`Demo lokal: /kelola dengan kartu DEMOKP1, /reseller dengan 081200000000, keduanya PIN ${DEMO_PIN}.`);

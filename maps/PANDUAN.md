@@ -34,29 +34,21 @@ npm run backup
 
 Perintah itu membuat `backup.sql`. Simpan di luar komputer ini. Kehilangan database berarti semua kartu berhenti berfungsi sampai dipulihkan.
 
-## Menyelesaikan deploy
+## Deploy pembaruan
 
-Worker dan database sudah dibuat, dan record CNAME `maps` lama sudah dihapus. Jalankan berurutan dari folder proyek.
-
-1. Perbarui tabel database. Perintah ini aman diulang:
+Pembaruan reseller menambah tabel dan kolom baru, jadi jalankan migrasi **sekali** sebelum deploy. Urutannya wajib: migrasi dulu, baru deploy.
 
 ```bash
-npm run db:init
+npm.cmd run db:migrate
 ```
-
-2. Deploy. Cloudflare membuat DNS `maps` dan sertifikat HTTPS otomatis:
 
 ```bash
-npx wrangler deploy
+npx.cmd wrangler deploy
 ```
 
-3. Pasang kata sandi admin. Salin nilai `ADMIN_PASSWORD` dari file `.dev.vars` saat diminta:
+Kalau migrasi dijalankan dua kali, muncul pesan `duplicate column`. Pesan itu tidak merusak data.
 
-```bash
-npx wrangler secret put ADMIN_PASSWORD
-```
-
-Lalu buka `https://maps.digivo.biz.id/admin`. Isi `ADMIN_WA` di `wrangler.toml` dan deploy ulang supaya tombol WhatsApp muncul.
+Isi `ADMIN_WA` di `wrangler.toml` lalu deploy ulang supaya tombol WhatsApp ke admin muncul.
 
 ## Menjalankan di komputer
 
@@ -80,7 +72,7 @@ Lalu jalankan, dan buka `http://localhost:3000`:
 npm run dev
 ```
 
-Masuk ke akun demo lokal di `/kelola` dengan kode `DEMOKP1` dan PIN `482915`. Data demo hanya ada di komputer ini. Kata sandi `/admin` lokal ada di `.dev.vars`.
+Akun demo lokal: `/kelola` dengan kode `DEMOKP1`, dan `/reseller` dengan nomor `081200000000`. Keduanya memakai PIN `482915`. Data demo hanya ada di komputer ini. Kata sandi `/admin` lokal ada di `.dev.vars`.
 
 ### Alamat penting
 
@@ -89,24 +81,50 @@ Masuk ke akun demo lokal di `/kelola` dengan kode `DEMOKP1` dan PIN `482915`. Da
 | `/` | Halaman depan dan input kode kartu |
 | `/kelola` | Login pemilik usaha |
 | `/admin` | Panel penjual |
+| `/reseller` | Panel reseller |
 | `/t/KODE`, `/q/KODE` | Link yang tertanam di kartu |
 
-## Alur penjual
+## Alur penjualan
 
-1. Buka `/admin`. Di **Tujuan kartu belum terjual**, tempel link Maps contoh, misalnya Malioboro. Semua kartu belum terjual langsung mengarah ke sana untuk demo.
-2. Buat batch, misalnya 100 kartu, lalu unduh **CSV vendor**. Kolom `url_nfc` ditulis ke chip, kolom `url_qr` dicetak sebagai QR. Tombol **Lembar cetak** berguna untuk contoh dan produksi kecil.
+### Persiapan
+
+1. Buka `/admin`, tab **Kartu**. Di **Tujuan kartu belum terjual**, tempel link Maps contoh, misalnya Malioboro. Semua kartu kosong langsung membuka link itu.
+2. Buat batch, lalu unduh **CSV vendor**. Kolom `url_nfc` ditulis ke chip, kolom `url_qr` menjadi QR. Tombol **QR dan kode** menampilkan QR dan kode kartu saja, plus lembar aktivasi untuk kemasan.
 3. Minta vendor **mengunci chip (lock) setelah ditulis**. Chip yang tidak dikunci bisa ditimpa orang iseng dengan aplikasi NFC gratis.
-4. Sertakan **lembar aktivasi** di setiap kemasan, bukan dicetak di kartu. Kode aktivasi mencegah orang lain mengklaim kartu lebih dulu.
-5. Ada pembeli: di **Atur kartu untuk pembeli**, isi kode kartu, nama bisnis, dan link Google Maps-nya. Kartu langsung mengarah ke bisnis itu dan mendapat trial Pro 7 hari.
-6. Berikan kode kartu dan PIN yang muncul ke pembeli. PIN hanya tampil sekali. Kalau hilang, pembeli memakai Lupa PIN dengan kode aktivasi.
-7. Salah link atau pindah lokasi: di daftar **Bisnis**, buka **Ganti nama atau link**.
-8. Pembeli upgrade lewat WhatsApp. Setelah bayar, cari bisnisnya, tekan `+1 bln` atau `+12 bln`.
 
-Panel admin dan aplikasi khusus ponsel, tetapi cetak lembar A4 lebih nyaman dari komputer.
+Setiap kartu kosong sudah bisa dipakai demo, karena membuka link contoh. Jadi tidak perlu menyiapkan kartu demo khusus.
+
+### Jual langsung atau lewat reseller
+
+Cara 1 dan cara 2 sama di sistem. Bedanya hanya kartu mana yang diberikan: kartu baru dari tas, atau kartu yang tadi dipakai demo.
+
+1. Di tab **Aktivasi**, isi kode kartu, nama bisnis, dan link Google Maps pembeli. Jumlah ulasan dan rating boleh diisi, supaya langsung tampil di dasbor pembeli.
+2. QR dan NFC langsung mengarah ke bisnis itu. Pembeli mendapat trial Pro 7 hari.
+3. Berikan kode kartu dan PIN, atau tekan **Kirim ke WhatsApp pembeli**. PIN hanya tampil sekali.
+4. Pembeli **tidak bisa mengganti tujuan QR dan NFC**, dan tidak bisa mereset kartu. Perubahan lewat admin di tab **Bisnis**, atau reseller di tab **Riwayat**.
+5. PIN hilang: tekan **PIN baru** di tab **Bisnis** atau **Riwayat**.
+
+Salah mengaktifkan kartu: admin memakai **Kosongkan kartu salah aktivasi** di tab **Kartu**. Kartu kembali ke stok.
+
+### Jual online
+
+Sertakan lembar aktivasi di kemasan. Pembeli memindai QR di lembar itu, kode terisi otomatis, lalu mengisi nama bisnis, link Maps, dan PIN sendiri. Pembeli online tetap bisa mengganti tujuan kartunya dari menu Atur.
+
+Bila kertas panduan dibuat sendiri, gunakan kode kartu dan kode aktivasi dari CSV. Jangan mengarahkan pembeli online untuk menempelkan ponsel ke kartu, karena kartu kosong membuka link demo.
+
+### Reseller
+
+1. Di tab **Reseller**, isi **Daftarkan reseller**. PIN muncul sekali. Reseller masuk di `/reseller` dengan nomor WhatsApp dan PIN itu.
+2. Di **Serahkan kartu**, pilih reseller, lalu pilih satu batch atau tempel daftar kode. Kode harus sama dengan kartu fisik yang diserahkan. Kartu kembali ke pusat dengan pilihan **Stok pusat**.
+3. Reseller hanya bisa mengaktifkan kartu di stoknya. Kartu milik reseller lain atau stok pusat ditolak.
+4. Setiap kartu yang terjual tercatat di tab **Riwayat** reseller: nama bisnis, kode kartu, kode aktivasi, tanggal, dan siapa yang mengaktifkan. Admin melihat jumlah stok dan terjual di daftar reseller, dan bisa mencari nama reseller di tab **Bisnis**.
+5. Kartu reseller yang diaktifkan pembeli sendiri tetap tercatat, tetapi reseller tidak bisa mengubah bisnisnya.
+
+Upgrade Pro tetap lewat admin. Setelah bayar, cari bisnisnya di tab **Bisnis**, tekan `+1 bln` atau `+12 bln`.
 
 ### Spesifikasi kartu 10 x 10 cm
 
-- **Lembar cetak** berukuran 100 x 100 mm, 4 kartu per A4. Lembar aktivasi ada di halaman terpisah.
+- **Desain kartu** dibuat terpisah. Aplikasi hanya menyediakan QR dan kode kartu.
 - **Chip:** stiker NTAG213 sudah cukup karena URL di sini pendek. Pilih antena lebar, sekitar 25 mm atau lebih, supaya tetap terbaca menembus akrilik.
 - **Posisi chip:** tempel di belakang pusat lingkaran "Tempel HP". Tanda dan chip harus sejajar, karena area baca ponsel kecil.
 - **Akrilik:** ketebalan menurunkan jarak baca. Uji contoh akrilik dengan chip di beberapa ponsel sebelum memesan massal.
@@ -116,24 +134,19 @@ Panel admin dan aplikasi khusus ponsel, tetapi cetak lembar A4 lebih nyaman dari
 
 ## Alur pemilik usaha
 
-Kalau pembeli mengaktifkan sendiri, bukan lewat admin:
+Pembeli masuk di `/kelola` dengan kode kartu dan PIN. Beranda menampilkan rating, bintang, dan jumlah ulasan di semua paket.
 
-1. Buka halaman depan dan masukkan kode kartu. Kalau tujuan bawaan belum diatur, tempelkan ponsel ke kartu juga bisa.
-2. Isi kode aktivasi, nama bisnis, link Google Maps, dan PIN 6 angka.
-3. Kartu aktif. Tempelkan lagi untuk menguji.
-4. Kelola di `/kelola` dengan kode kartu dan PIN.
-
-Lupa PIN dipulihkan dengan kode aktivasi di halaman `/kelola`. Reset kartu ada di menu Kartu dan memerlukan PIN.
+Lupa PIN dipulihkan dengan kode aktivasi di halaman `/kelola`, atau minta PIN baru ke penjual. Pembeli online bisa mereset kartu di menu Kartu dengan PIN.
 
 ## Tanpa API key
 
-Aplikasi berjalan penuh tanpa API key Google.
+Aplikasi berjalan penuh tanpa API key Google. Hanya angka ulasan yang berbeda.
 
 | Fitur | Tanpa API key | Dengan API key |
 | --- | --- | --- |
 | Link Maps jadi link form ulasan | Bisa | Bisa |
 | Cari bisnis dengan mengetik nama | Tidak, tempel link | Bisa |
-| Jumlah ulasan untuk Before-After | Diisi manual | Otomatis |
+| Rating dan jumlah ulasan di dasbor | Diisi manual | Otomatis, diperbarui maksimal sekali sehari saat dasbor dibuka |
 
 Link Maps diubah menjadi `search.google.com/local/writereview?placeid=...`, sehingga pelanggan langsung memberi bintang dan menulis. Cara ini memakai format Place ID yang tidak didokumentasikan Google, jadi uji satu tap setiap selesai aktivasi. Kalau konversi gagal, aplikasi memberi peringatan dan link "Minta ulasan" dari Profil Bisnis (`g.page/r/.../review`) menjadi cadangan.
 
@@ -145,7 +158,7 @@ Untuk mengaktifkan API key nanti, buat kunci **Places API (New)** di Google Clou
 npx wrangler secret put GOOGLE_PLACES_API_KEY
 ```
 
-Bagian ini belum diuji dengan kunci sungguhan.
+Bagian ini belum diuji dengan kunci sungguhan. Tanpa kunci, Google tidak menyediakan rating lewat link atau embed peta, sudah dicoba. Mengambil angka dari halaman Google tanpa izin melanggar ketentuan Google dan mudah rusak, jadi tidak dipakai.
 
 ## Trial Pro
 
@@ -153,7 +166,7 @@ Setiap kartu baru mendapat Pro gratis 7 hari saat aktivasi. Setelah habis, bisni
 
 ## Before-After
 
-Fitur ini membandingkan jumlah ulasan saat aktivasi dengan sekarang. Pemilik mengisi angka Sebelum saat aktivasi, lalu memperbarui angka sekarang dari dasbor. Dengan API key, angka diambil otomatis maksimal sekali sehari.
+Fitur Pro ini membandingkan jumlah ulasan pertama dengan angka terbaru.
 
 Tujuan kartu yang diganti menghapus angka Before lama, karena tempatnya sudah berbeda.
 

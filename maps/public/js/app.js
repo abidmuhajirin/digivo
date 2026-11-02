@@ -56,21 +56,6 @@ function snapshotCell(label, snapshot) {
 
 function beforeAfterPanel() {
   const data = stats.beforeAfter;
-  const form = me.business.reviewTracking ? '' : `
-    <form id="review-form" class="stack-sm">
-      <div class="split-fields">
-        <label class="field"><span>Jumlah ulasan di Google</span><input name="reviewCount" inputmode="numeric" maxlength="7" required></label>
-        <label class="field"><span>Rating</span><input name="rating" inputmode="decimal" maxlength="3" placeholder="Misal: 4,5"></label>
-      </div>
-      <p class="form-msg" role="alert"></p>
-      <button class="btn btn-small" type="submit">${data ? 'Perbarui angka sekarang' : 'Simpan angka Sebelum'}</button>
-    </form>`;
-
-  if (!data) {
-    return `<section class="panel"><h2>Before-After ulasan</h2>
-      <p class="muted">${me.business.reviewTracking ? 'Angka pertama muncul setelah Google merespons.' : 'Isi jumlah ulasan sekarang sebagai titik awal.'}</p>${form}</section>`;
-  }
-  const source = (data.after ?? data.before).source === 'google' ? 'Diambil otomatis dari Google.' : 'Diisi manual.';
   return `<section class="panel">
     <h2>Before-After ulasan</h2>
     <div class="split ba-split">
@@ -78,8 +63,43 @@ function beforeAfterPanel() {
       ${data.after ? snapshotCell('Sekarang', data.after) : '<div><small>Sekarang</small><span class="num">-</span><small>Belum ada data baru</small></div>'}
     </div>
     ${data.after ? `<p class="ba-gain">${data.gained >= 0 ? '+' : ''}${data.gained} ulasan sejak titik awal</p>` : ''}
-    <p class="muted">${source} Angka ini mencakup semua ulasan, termasuk yang tidak lewat kartu.</p>
-    ${form}
+    <p class="muted">Angka ini mencakup semua ulasan, termasuk yang tidak lewat kartu.</p>
+  </section>`;
+}
+
+const formatRating = (rating) => rating.toFixed(1).replace('.', ',');
+
+function reviewForm(hasData) {
+  return `
+    <form id="review-form" class="stack-sm">
+      <div class="split-fields">
+        <label class="field"><span>Jumlah ulasan</span><input name="reviewCount" inputmode="numeric" maxlength="7" required></label>
+        <label class="field"><span>Rating</span><input name="rating" inputmode="decimal" maxlength="3" required placeholder="Misal: 4,9"></label>
+      </div>
+      <p class="form-msg" role="alert"></p>
+      <button class="btn btn-small" type="submit">${hasData ? 'Perbarui angka' : 'Simpan angka'}</button>
+    </form>`;
+}
+
+function reviewsPanel() {
+  const { business } = me;
+  const data = stats.reviews;
+  const form = business.reviewTracking ? '' : data
+    ? `<details class="drawer"><summary>Perbarui angka</summary><p class="muted">Salin angka dari profil bisnis di Google Maps.</p>${reviewForm(true)}</details>`
+    : `<p class="muted">Salin rating dan jumlah ulasan dari profil bisnis di Google Maps.</p>${reviewForm(false)}`;
+  const score = !data
+    ? (business.reviewTracking ? '<p class="muted">Angka pertama muncul setelah Google merespons.</p>' : '')
+    : `<div class="review-score">
+        ${data.rating ? `<b>${formatRating(data.rating)}</b>` : ''}
+        <div>
+          ${data.rating ? `<span class="star-track" role="img" aria-label="Rating ${formatRating(data.rating)} dari 5"><svg viewBox="0 0 120 22" aria-hidden="true"><use href="/icons.svg#stars5"/></svg><span class="star-fill" data-w="${Math.round((data.rating / 5) * 100)}"><svg viewBox="0 0 120 22" aria-hidden="true"><use href="/icons.svg#stars5"/></svg></span></span>` : ''}
+          <p class="review-count">${data.count.toLocaleString('id-ID')} ulasan</p>
+        </div>
+      </div>
+      <p class="muted">${data.source === 'google' ? 'Otomatis dari Google' : 'Diisi manual'}, ${formatDate(data.at)}.</p>`;
+  return `<section class="panel">
+    <div class="review-head"><svg viewBox="0 0 48 48" aria-hidden="true"><use href="/icons.svg#google-g"/></svg><h2>Ulasan Google</h2></div>
+    ${score}${form}
   </section>`;
 }
 
@@ -90,37 +110,29 @@ function renderBeranda() {
   const clicks = stats.reviewClicks ?? 0;
 
   view.innerHTML = `
-    <header class="sheet"><div class="sheet-inner">
-      <div class="row between">
-        <span class="wordmark">${icon('tap')}${esc(brand)}</span>
-        <span class="plan-chip ${pro ? 'pro' : ''}">${business.isTrial ? 'Trial Pro' : pro ? 'Pro' : 'Basic'}</span>
-      </div>
-      <div class="pcard-stack">
-        <div class="pcard-rear">${me.cards.length} kartu aktif</div>
-        <div class="pcard">
-          <div class="pcard-top">${icon('tap')}<span class="pcard-code">${esc(me.cards[0]?.code ?? '')}</span></div>
-          <div><small>Total tap</small><div class="pcard-amount">${stats.total.toLocaleString('id-ID')}</div></div>
-          <div class="pcard-foot"><span class="pcard-name">${esc(business.name)}</span></div>
-          <a class="notch-btn" href="#kartu">${icon('plus')}Kartu</a>
-        </div>
-      </div>
-    </div></header>
+    <div class="topbar">
+      <span class="business-name">${esc(business.name)}</span>
+      <span class="plan-chip ${pro ? 'pro' : ''}">${business.isTrial ? 'Trial Pro' : pro ? 'Pro' : 'Basic'}</span>
+    </div>
 
     <main class="wrap app-main stack">
+      ${reviewsPanel()}
+
       <div class="quick">
-        <a class="quick-item" href="${esc(business.reviewUrl)}" target="_blank" rel="noopener"><span class="dot">${icon('open')}</span>Uji tujuan</a>
-        <button class="quick-item" id="copy-link"><span class="dot">${icon('copy')}</span>Salin link</button>
-        <a class="quick-item" href="${esc(waUrl('', `Terima kasih sudah berkunjung ke ${business.name}. Bantu kami dengan memberi ulasan: ${firstCardUrl()}`))}" target="_blank" rel="noopener"><span class="dot">${icon('share')}</span>Kirim WA</a>
+        <a class="quick-item" href="${esc(business.reviewUrl)}" target="_blank" rel="noopener">${icon('open')}Uji tujuan</a>
+        <button class="quick-item" id="copy-link">${icon('copy')}Salin link</button>
+        <a class="quick-item" href="${esc(waUrl('', `Terima kasih sudah berkunjung ke ${business.name}. Bantu kami dengan memberi ulasan: ${firstCardUrl()}`))}" target="_blank" rel="noopener">${icon('share')}Kirim WA</a>
       </div>
 
       ${business.isTrial ? trialPanel() : ''}
-      ${pro ? beforeAfterPanel() : ''}
+      ${pro && stats.beforeAfter ? beforeAfterPanel() : ''}
 
       <section class="panel">
         <div class="panel-head"><h2>Tap minggu ini</h2><span class="num">${stats.weekTotal}</span></div>
         ${stats.total === 0
           ? '<p class="muted">Belum ada tap. Tempelkan ponsel ke kartu untuk memastikan semuanya berjalan, lalu letakkan kartu di kasir.</p>'
           : capsules(stats.week)}
+        <p class="muted">Total ${stats.total.toLocaleString('id-ID')} tap dari ${me.cards.length} kartu.</p>
       </section>
 
       ${pro ? `
@@ -139,15 +151,16 @@ function renderBeranda() {
         <h2>Kartu paling aktif</h2>
         <ul class="list">${stats.perCard.map((card, i) => `
           <li><span class="round">${i + 1}</span>
-            <span class="grow">${esc(card.label || card.code)}<small>${esc(card.code)}</small></span>
+            <span class="grow">${esc(card.label || card.code)}${card.label ? `<small>${esc(card.code)}</small>` : ''}</span>
             <span class="num">${card.n}</span></li>`).join('')}</ul>
       </section>`
       : `<section class="panel">${upgradeBlock('Lihat hasil kartu Anda', 'Before-After jumlah ulasan, performa per kasir atau meja, jam ramai, dan data 30 hari ada di paket Pro.')}</section>`}
     </main>`;
 
+  view.querySelectorAll('[data-w]').forEach((node) => { node.style.width = `${node.dataset.w}%`; });
   view.querySelectorAll('[data-h]').forEach((node) => { node.style.height = `${node.dataset.h}%`; });
-  const reviewForm = document.getElementById('review-form');
-  if (reviewForm) bindForm(reviewForm, async (values) => {
+  const reviewsForm = document.getElementById('review-form');
+  if (reviewsForm) bindForm(reviewsForm, async (values) => {
     await api('/api/reviews', { method: 'POST', body: values });
     await load();
     toast('Angka ulasan disimpan');
@@ -160,7 +173,7 @@ function renderBeranda() {
 }
 
 async function renderMasukan() {
-  view.innerHTML = '<main class="wrap app-main stack"><div class="topbar"><span></span><h1>Masukan pelanggan</h1><span></span></div><div id="inbox"></div></main>';
+  view.innerHTML = '<div class="topbar"><h1>Masukan pelanggan</h1></div><main class="wrap app-main stack"><div id="inbox"></div></main>';
   const box = document.getElementById('inbox');
   if (!isPro()) {
     box.innerHTML = `<section class="panel">${upgradeBlock('Terima keluhan sebelum jadi masalah', 'Pelanggan bisa mengirim pesan privat lewat Minipage, sambil tetap bebas menulis ulasan di Google.')}</section>`;
@@ -190,9 +203,10 @@ async function renderMasukan() {
 }
 
 function renderKartu() {
+  const canReset = !me.business.linkLocked;
   view.innerHTML = `
+    <div class="topbar"><h1>Kartu saya</h1></div>
     <main class="wrap app-main stack">
-      <div class="topbar"><span></span><h1>Kartu saya</h1><span></span></div>
       ${me.cards.map((card) => `
         <section class="panel stack-sm">
           <div class="panel-head"><h2>${esc(card.label || 'Kartu tanpa nama')}</h2><span class="num">${card.taps} tap</span></div>
@@ -201,7 +215,7 @@ function renderKartu() {
             <label class="field grow"><span class="hp">Nama kartu</span><input name="label" maxlength="40" value="${esc(card.label)}" placeholder="Misal: Kasir, Meja 3"></label>
             <button class="btn btn-small" type="submit">Simpan</button>
           </form>
-          <details class="drawer">
+          ${canReset ? `<details class="drawer">
             <summary>Reset kartu ini</summary>
             <form data-reset="${card.id}" class="stack-sm">
               <p class="muted">Kartu kembali kosong dan riwayat tap-nya dihapus.${me.cards.length === 1 ? ' Ini kartu terakhir, jadi seluruh data bisnis ikut terhapus.' : ''} Tindakan ini tidak bisa dibatalkan.</p>
@@ -210,7 +224,7 @@ function renderKartu() {
               <p class="form-msg" role="alert"></p>
               <button class="btn btn-danger" type="submit">Reset kartu</button>
             </form>
-          </details>
+          </details>` : ''}
         </section>`).join('')}
 
       <section class="panel">
@@ -252,16 +266,24 @@ function renderKartu() {
 function renderAtur() {
   const { business } = me;
   const pro = isPro();
+  const sellerLink = me.sellerWa
+    ? `<a class="btn btn-small" href="${esc(waUrl(me.sellerWa, `Halo, saya mau mengganti tujuan kartu ulasan ${business.name}.`))}" target="_blank" rel="noopener">Hubungi penjual</a>`
+    : '';
   view.innerHTML = `
+    <div class="topbar"><h1>Pengaturan</h1></div>
     <main class="wrap app-main stack">
-      <div class="topbar"><span></span><h1>Pengaturan</h1><span></span></div>
 
       <form id="info" class="panel stack-sm">
         <h2>Info bisnis</h2>
         <label class="field"><span>Nama bisnis</span><input name="name" maxlength="80" required value="${esc(business.name)}"></label>
+        ${business.linkLocked ? `
+        <div class="stack-sm">
+          <p class="note warn">${icon('lock')}<span>Tujuan QR dan NFC diatur penjual. Hubungi penjual untuk menggantinya.</span></p>
+          ${sellerLink}
+        </div>` : `
         <label class="field"><span>Tujuan kartu</span><input name="link" required value="${esc(business.reviewUrl)}">
-          <small>Mengganti link langsung mengubah semua kartu. Tidak perlu cetak ulang.</small></label>
-        ${business.linkKind === 'review' ? '' : `<p class="note warn">${icon('open')}<span>Tujuan saat ini halaman Maps. Pakai link "Minta ulasan" dari Profil Bisnis agar pelanggan langsung masuk ke form.</span></p>`}
+          <small>Mengganti link langsung mengubah semua kartu. Tidak perlu cetak ulang.</small></label>`}
+        ${business.linkLocked || business.linkKind === 'review' ? '' : `<p class="note warn">${icon('open')}<span>Tujuan saat ini halaman Maps. Pakai link "Minta ulasan" dari Profil Bisnis agar pelanggan langsung masuk ke form.</span></p>`}
         <p class="form-msg" role="status"></p>
         <button class="btn btn-light" type="submit">Simpan perubahan</button>
       </form>
@@ -356,7 +378,6 @@ async function render() {
     if (button.dataset.tab === tab) button.setAttribute('aria-current', 'page');
     else button.removeAttribute('aria-current');
   });
-  document.querySelector('meta[name=theme-color]').content = tab === 'beranda' ? '#F6F2EC' : '#101011';
   try {
     if (tab === 'beranda') renderBeranda();
     if (tab === 'masukan') await renderMasukan();

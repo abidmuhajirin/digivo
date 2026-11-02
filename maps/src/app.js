@@ -11,6 +11,7 @@ const DAY = 86_400_000;
 const WIB_SECONDS = 7 * 3600;
 const OWNER_COOKIE = 'tu_owner';
 const ADMIN_COOKIE = 'tu_admin';
+const RESELLER_COOKIE = 'tu_reseller';
 const PIN_MAX_FAILS = 5;
 const PIN_LOCK_MS = 15 * 60_000;
 const TRIAL_DAYS = 7;
@@ -37,6 +38,12 @@ function cleanReviews({ reviewCount, rating }) {
   return { count, rating: score };
 }
 
+// Semua nomor disimpan sebagai 628xxx supaya 08xx dan +628xx dikenali sebagai orang yang sama.
+function cleanWhatsapp(value) {
+  const digits = String(value ?? '').replace(/\D/g, '').replace(/^0/, '62').replace(/^8/, '628');
+  return /^62\d{8,13}$/.test(digits) ? digits : null;
+}
+
 function cleanHttpsUrl(value) {
   const text = cleanText(value, 500);
   if (!text) return '';
@@ -56,6 +63,7 @@ const clientIp = (c) => c.req.header('cf-connecting-ip') ?? 'local';
 
 const cardByCode = (c, code) => first(c, 'SELECT * FROM cards WHERE code = ?', normalizeCode(code));
 const businessById = (c, id) => first(c, 'SELECT * FROM businesses WHERE id = ?', id);
+const resellerById = (c, id) => first(c, 'SELECT * FROM resellers WHERE id = ?', id);
 const logEvent = (c, card, type, source) => run(c,
   'INSERT INTO events (card_id, business_id, type, source, ts) VALUES (?, ?, ?, ?, ?)',
   card.id, card.business_id, type, source, Date.now());
@@ -120,23 +128,24 @@ function publicBusiness(c, business) {
     instagram: business.instagram,
     menuUrl: business.menu_url,
     isDemo: Boolean(business.is_demo),
+    linkLocked: Boolean(business.link_locked),
   };
 }
 
 const defaultDestination = async (c) => (await first(c, "SELECT value FROM settings WHERE key = 'default_url'"))?.value ?? null;
 
 // Dipakai aktivasi oleh pemilik dan oleh admin, supaya trial dan titik awal Before-After selalu sama.
-async function activateCard(c, card, { name, target, pin, baseline }) {
+async function activateCard(c, card, { name, target, pin, baseline, via }) {
   // Trial hanya sekali per kartu, supaya reset tidak jadi jalan memperpanjang Pro.
   const trial = !card.trial_used;
   const now = Date.now();
   const inserted = await run(c, `
-    INSERT INTO businesses (name, review_url, link_kind, place_id, pin_hash, plan, pro_until, is_trial, created_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    INSERT INTO businesses (name, review_url, link_kind, place_id, pin_hash, plan, pro_until, is_trial, link_locked, created_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     name, target.url, target.kind, target.placeId ?? null, await hashPin(pin, iterations(c)),
-    trial ? 'pro' : 'basic', trial ? now + TRIAL_DAYS * DAY : null, trial ? 1 : 0, now);
+    trial ? 'pro' : 'basic', trial ? now + TRIAL_DAYS * DAY : null, trial ? 1 : 0, via === 'self' ? 0 : 1, now);
   const businessId = inserted.meta.last_row_id;
-  await run(c, 'UPDATE cards SET business_id = ?, activated_at = ?, trial_used = 1 WHERE id = ?', businessId, now, card.id);
+  await run(c, 'UPDATE cards SET business_id = ?, activated_at = ?, activated_via = ?, trial_used = 1 WHERE id = ?', businessId, now, via, card.id);
 
   const tracked = await snapshotFromGoogle(c, businessId, target.placeId);
   if (!tracked && baseline) await insertSnapshot(c, businessId, baseline.count, baseline.rating, 'manual');
@@ -147,6 +156,85 @@ async function activateCard(c, card, { name, target, pin, baseline }) {
 async function resetBeforeAfter(c, businessId, placeId) {
   await run(c, 'DELETE FROM review_snapshots WHERE business_id = ?', businessId);
   await snapshotFromGoogle(c, businessId, placeId);
+}
+
+// Dipakai admin dan reseller. Tujuan yang diatur penjual terkunci bagi pembeli, jadi PIN dibuat di sini dan tampil sekali.
+async function activateForBuyer(c, card, input, via) {
+  const name = cleanText(input.name, 80);
+  if (name.length < 2) return c.json({ error: 'Isi nama bisnis.' }, 400);
+  const baseline = cleanReviews(input);
+  if (baseline?.error) return c.json({ error: baseline.error }, 400);
+  const target = await destination(c, { link: input.link });
+  if (!target.ok) return c.json({ error: target.error }, 400);
+
+  const pin = randomPin();
+  const { trial } = await activateCard(c, card, { name, target, pin, baseline, via });
+  return c.json({ ok: true, code: card.code, name, pin, kind: target.kind, reviewUrl: target.url, trial, trialDays: TRIAL_DAYS });
+}
+
+async function editBusiness(c, business) {
+  const { name, link } = await body(c);
+  const cleanName = cleanText(name, 80);
+  if (cleanName.length < 2) return c.json({ error: 'Isi nama bisnis.' }, 400);
+  if (!link || link === business.review_url) {
+    await run(c, 'UPDATE businesses SET name = ? WHERE id = ?', cleanName, business.id);
+    return c.json({ ok: true, url: business.review_url, kind: business.link_kind });
+  }
+  const target = await destination(c, { link });
+  if (!target.ok) return c.json({ error: target.error }, 400);
+  await run(c, 'UPDATE businesses SET name = ?, review_url = ?, link_kind = ?, place_id = ? WHERE id = ?',
+    cleanName, target.url, target.kind, target.placeId ?? null, business.id);
+  await resetBeforeAfter(c, business.id, target.placeId);
+  return c.json({ ok: true, url: target.url, kind: target.kind });
+}
+
+async function renewBusinessPin(c, business) {
+  const pin = randomPin();
+  await run(c, 'UPDATE businesses SET pin_hash = ?, failed_pins = 0, locked_until = 0 WHERE id = ?',
+    await hashPin(pin, iterations(c)), business.id);
+  await run(c, "DELETE FROM sessions WHERE kind = 'owner' AND business_id = ?", business.id);
+  return c.json({ ok: true, name: business.name, pin });
+}
+
+// Mengembalikan kartu ke kondisi baru. Kartu terakhir ikut menghapus data bisnis.
+async function clearCard(c, card) {
+  const id = card.business_id;
+  const { n: remaining } = await first(c, 'SELECT COUNT(*) AS n FROM cards WHERE business_id = ?', id);
+  const db = c.env.DB;
+  const statements = [
+    db.prepare('DELETE FROM events WHERE card_id = ?').bind(card.id),
+    db.prepare('UPDATE feedback SET card_id = NULL WHERE card_id = ?').bind(card.id),
+    db.prepare("UPDATE cards SET business_id = NULL, label = '', activated_at = NULL, activated_via = NULL WHERE id = ?").bind(card.id),
+  ];
+  if (remaining <= 1) {
+    statements.push(
+      db.prepare('DELETE FROM events WHERE business_id = ?').bind(id),
+      db.prepare('DELETE FROM feedback WHERE business_id = ?').bind(id),
+      db.prepare('DELETE FROM review_snapshots WHERE business_id = ?').bind(id),
+      db.prepare("DELETE FROM sessions WHERE kind = 'owner' AND business_id = ?").bind(id),
+      db.prepare('DELETE FROM businesses WHERE id = ?').bind(id),
+    );
+  }
+  await db.batch(statements);
+  return remaining <= 1;
+}
+
+// Mengembalikan Response bila ditolak. PIN salah beruntun mengunci sementara, untuk pemilik maupun reseller.
+async function rejectPin(c, table, row, pin, { wrong, lockedHint }) {
+  const now = Date.now();
+  if (row.locked_until > now) {
+    const minutes = Math.ceil((row.locked_until - now) / 60_000);
+    return c.json({ error: `Terlalu banyak PIN salah. Coba lagi dalam ${minutes} menit${lockedHint}.` }, 429);
+  }
+  if (!await verifyPin(String(pin ?? ''), row.pin_hash)) {
+    const fails = row.failed_pins + 1;
+    const locked = fails >= PIN_MAX_FAILS;
+    await run(c, `UPDATE ${table} SET failed_pins = ?, locked_until = ? WHERE id = ?`,
+      locked ? 0 : fails, locked ? now + PIN_LOCK_MS : 0, row.id);
+    return c.json({ error: wrong }, 401);
+  }
+  await run(c, `UPDATE ${table} SET failed_pins = 0, locked_until = 0 WHERE id = ?`, row.id);
+  return null;
 }
 
 async function requireOwner(c, next) {
@@ -170,6 +258,18 @@ async function requireAdmin(c, next) {
   await next();
 }
 
+async function requireReseller(c, next) {
+  const session = await readSession(c.env.DB, getCookie(c, RESELLER_COOKIE), 'reseller');
+  const reseller = session && await resellerById(c, session.business_id);
+  if (!reseller?.active) return c.json({ error: 'Sesi berakhir. Masuk lagi dengan nomor WhatsApp dan PIN.' }, 401);
+  c.set('reseller', reseller);
+  await next();
+}
+
+const latestReviews = (c, businessId) => first(c, `
+  SELECT review_count AS count, rating, source, taken_at AS at
+  FROM review_snapshots WHERE business_id = ? ORDER BY taken_at DESC, id DESC LIMIT 1`, businessId);
+
 async function beforeAfter(c, businessId) {
   const rows = await all(c, `
     SELECT review_count AS count, rating, source, taken_at AS at
@@ -190,10 +290,10 @@ function miniPage(business, card, source) {
 
   return `<!doctype html>
 <html lang="id"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#F6F2EC"><meta name="robots" content="noindex"><title>${esc(business.name)}</title>
+<meta name="theme-color" content="#ffffff"><meta name="robots" content="noindex"><title>${esc(business.name)}</title>
 <link rel="icon" href="/favicon.svg" type="image/svg+xml"><link rel="stylesheet" href="/css/app.css"></head>
 <body class="page-mini" data-code="${esc(card.code)}">
-<header class="sheet sheet-mini">
+<header class="sheet-mini">
   <div class="initial" aria-hidden="true">${esc(business.name.slice(0, 1).toUpperCase())}</div>
   <h1>${esc(business.name)}</h1>
   <p>${esc(business.tagline || 'Terima kasih sudah berkunjung.')}</p>
@@ -350,7 +450,7 @@ export function createApp() {
     const target = await destination(c, { link, placeId });
     if (!target.ok) return c.json({ error: target.error }, 400);
 
-    const { businessId, trial } = await activateCard(c, card, { name: cleanName, target, pin, baseline });
+    const { businessId, trial } = await activateCard(c, card, { name: cleanName, target, pin, baseline, via: 'self' });
 
     startCookie(c, OWNER_COOKIE, await createSession(c.env.DB, 'owner', businessId, 30 * DAY), 30 * DAY);
     return c.json({ ok: true, name: cleanName, kind: target.kind, reviewUrl: target.url, code: card.code, trial, trialDays: TRIAL_DAYS });
@@ -373,19 +473,8 @@ export function createApp() {
     const business = card?.business_id ? await businessById(c, card.business_id) : null;
     if (!business) return c.json({ error: 'Kode kartu atau PIN salah.' }, 401);
 
-    const now = Date.now();
-    if (business.locked_until > now) {
-      const minutes = Math.ceil((business.locked_until - now) / 60_000);
-      return c.json({ error: `Terlalu banyak PIN salah. Coba lagi dalam ${minutes} menit, atau pakai Lupa PIN.` }, 429);
-    }
-    if (!await verifyPin(String(pin ?? ''), business.pin_hash)) {
-      const fails = business.failed_pins + 1;
-      const locked = fails >= PIN_MAX_FAILS;
-      await run(c, 'UPDATE businesses SET failed_pins = ?, locked_until = ? WHERE id = ?',
-        locked ? 0 : fails, locked ? now + PIN_LOCK_MS : 0, business.id);
-      return c.json({ error: 'Kode kartu atau PIN salah.' }, 401);
-    }
-    await run(c, 'UPDATE businesses SET failed_pins = 0, locked_until = 0 WHERE id = ?', business.id);
+    const rejected = await rejectPin(c, 'businesses', business, pin, { wrong: 'Kode kartu atau PIN salah.', lockedHint: ', atau pakai Lupa PIN' });
+    if (rejected) return rejected;
     startCookie(c, OWNER_COOKIE, await createSession(c.env.DB, 'owner', business.id, 30 * DAY), 30 * DAY);
     return c.json({ ok: true });
   });
@@ -419,7 +508,11 @@ export function createApp() {
       SELECT c.id, c.code, c.label, c.activated_at AS activatedAt,
         (SELECT COUNT(*) FROM events e WHERE e.card_id = c.id AND e.type = 'tap') AS taps
       FROM cards c WHERE c.business_id = ? ORDER BY c.activated_at, c.id`, business.id);
-    return c.json({ business: publicBusiness(c, business), cards, baseUrl: baseUrlOf(c), adminWa: c.env.ADMIN_WA ?? '' });
+    const seller = await first(c, `
+      SELECT r.whatsapp FROM cards c JOIN resellers r ON r.id = c.reseller_id
+      WHERE c.business_id = ? LIMIT 1`, business.id);
+    const adminWa = c.env.ADMIN_WA ?? '';
+    return c.json({ business: publicBusiness(c, business), cards, baseUrl: baseUrlOf(c), adminWa, sellerWa: seller?.whatsapp ?? adminWa });
   });
 
   app.put('/api/me', requireOwner, async (c) => {
@@ -432,6 +525,7 @@ export function createApp() {
       if (updates.name.length < 2) return c.json({ error: 'Isi nama bisnis.' }, 400);
     }
     if ((link !== undefined && link !== business.review_url) || placeId) {
+      if (business.link_locked) return c.json({ error: 'Tujuan kartu ini diatur penjual. Hubungi penjual untuk menggantinya.' }, 403);
       const target = await destination(c, { link, placeId });
       if (!target.ok) return c.json({ error: target.error }, 400);
       updates.review_url = target.url;
@@ -474,7 +568,7 @@ export function createApp() {
     return c.json({ ok: true });
   });
 
-  app.post('/api/reviews', requireOwner, requirePro, async (c) => {
+  app.post('/api/reviews', requireOwner, async (c) => {
     const business = c.get('business');
     if (c.env.GOOGLE_PLACES_API_KEY && business.place_id) return c.json({ error: 'Jumlah ulasan sudah diambil otomatis dari Google.' }, 409);
     const reviews = cleanReviews(await body(c));
@@ -502,11 +596,11 @@ export function createApp() {
       return { d, n: byDay.get(d) ?? 0 };
     });
     const week = daily.slice(-7);
-    const stats = { total, week, weekTotal: week.reduce((sum, day) => sum + day.n, 0) };
-    if (!pro) return c.json(stats);
-
     const { at: lastSnapshot } = await first(c, 'SELECT MAX(taken_at) AS at FROM review_snapshots WHERE business_id = ?', id);
     if (!lastSnapshot || now - lastSnapshot > DAY) await snapshotFromGoogle(c, id, business.place_id);
+
+    const stats = { total, week, weekTotal: week.reduce((sum, day) => sum + day.n, 0), reviews: await latestReviews(c, id) };
+    if (!pro) return c.json(stats);
 
     const monthTaps = daily.reduce((sum, day) => sum + day.n, 0);
     const sources = await all(c, `SELECT source, COUNT(*) AS n FROM events
@@ -565,36 +659,20 @@ export function createApp() {
     return c.json({ ok: true });
   });
 
-  // Reset mengembalikan kartu ke kondisi baru. Kartu terakhir ikut menghapus data bisnis.
   app.post('/api/cards/:id/reset', requireOwner, async (c) => {
     const business = c.get('business');
     const blocked = await tooMany(c, 'reset', 8, 15 * 60_000, business.id);
     if (blocked) return blocked;
+    // Tanpa ini, pembeli bisa mengosongkan kartu lalu mengaktifkan ulang dengan link lain.
+    if (business.link_locked) return c.json({ error: 'Kartu ini diatur penjual. Hubungi penjual untuk mereset.' }, 403);
     const card = await ownedCard(c);
     if (!card) return c.json({ error: 'Kartu tidak ditemukan.' }, 404);
     const { pin } = await body(c);
     if (!await verifyPin(String(pin ?? ''), business.pin_hash)) return c.json({ error: 'PIN salah.' }, 403);
 
-    const { id } = business;
-    const { n: remaining } = await first(c, 'SELECT COUNT(*) AS n FROM cards WHERE business_id = ?', id);
-    const db = c.env.DB;
-    const statements = [
-      db.prepare('DELETE FROM events WHERE card_id = ?').bind(card.id),
-      db.prepare('UPDATE feedback SET card_id = NULL WHERE card_id = ?').bind(card.id),
-      db.prepare("UPDATE cards SET business_id = NULL, label = '', activated_at = NULL WHERE id = ?").bind(card.id),
-    ];
-    if (remaining <= 1) {
-      statements.push(
-        db.prepare('DELETE FROM events WHERE business_id = ?').bind(id),
-        db.prepare('DELETE FROM feedback WHERE business_id = ?').bind(id),
-        db.prepare('DELETE FROM review_snapshots WHERE business_id = ?').bind(id),
-        db.prepare("DELETE FROM sessions WHERE kind = 'owner' AND business_id = ?").bind(id),
-        db.prepare('DELETE FROM businesses WHERE id = ?').bind(id),
-      );
-    }
-    await db.batch(statements);
-    if (remaining <= 1) deleteCookie(c, OWNER_COOKIE, { path: '/' });
-    return c.json({ ok: true, loggedOut: remaining <= 1 });
+    const loggedOut = await clearCard(c, card);
+    if (loggedOut) deleteCookie(c, OWNER_COOKIE, { path: '/' });
+    return c.json({ ok: true, loggedOut });
   });
 
   // ---------- Admin ----------
@@ -630,14 +708,20 @@ export function createApp() {
       trials: await count("SELECT COUNT(*) AS n FROM businesses WHERE plan = 'pro' AND is_trial = 1 AND is_demo = 0 AND pro_until > ?", now),
       taps30: await count("SELECT COUNT(*) AS n FROM events WHERE type = 'tap' AND ts >= ?", since),
       defaultUrl: await defaultDestination(c),
+      resellers: await all(c, `
+        SELECT r.id, r.name, r.whatsapp, r.city, r.active, r.created_at AS createdAt,
+          (SELECT COUNT(*) FROM cards k WHERE k.reseller_id = r.id AND k.business_id IS NULL) AS stock,
+          (SELECT COUNT(*) FROM cards k WHERE k.reseller_id = r.id AND k.business_id IS NOT NULL) AS sold
+        FROM resellers r ORDER BY r.active DESC, r.created_at DESC LIMIT 500`),
       batches: await all(c, `
         SELECT b.id, b.note, b.qty, b.created_at AS createdAt,
           (SELECT COUNT(*) FROM cards c WHERE c.batch_id = b.id AND c.business_id IS NOT NULL) AS activated
         FROM batches b ORDER BY b.id DESC LIMIT 50`),
       businessList: await all(c, `
-        SELECT b.id, b.name, b.review_url AS reviewUrl, b.link_kind AS linkKind, b.plan, b.pro_until AS proUntil, b.is_trial AS isTrial, b.is_demo AS isDemo, b.created_at AS createdAt,
+        SELECT b.id, b.name, b.review_url AS reviewUrl, b.link_kind AS linkKind, b.plan, b.pro_until AS proUntil, b.is_trial AS isTrial, b.is_demo AS isDemo, b.link_locked AS linkLocked, b.created_at AS createdAt,
           (SELECT COUNT(*) FROM cards c WHERE c.business_id = b.id) AS cards,
           (SELECT GROUP_CONCAT(c.code, ' ') FROM cards c WHERE c.business_id = b.id) AS codes,
+          (SELECT r.name FROM cards c JOIN resellers r ON r.id = c.reseller_id WHERE c.business_id = b.id LIMIT 1) AS seller,
           (SELECT COUNT(*) FROM events e WHERE e.business_id = b.id AND e.type = 'tap' AND e.ts >= ?) AS taps30
         FROM businesses b ORDER BY b.created_at DESC LIMIT 500`, since),
     });
@@ -661,35 +745,97 @@ export function createApp() {
     const input = await body(c);
     const card = await cardByCode(c, input.code);
     if (!card) return c.json({ error: 'Kode kartu tidak ditemukan.' }, 404);
-    if (card.business_id) return c.json({ error: 'Kartu ini sudah aktif. Ganti tujuannya di daftar Bisnis.' }, 409);
-    const name = cleanText(input.name, 80);
-    if (name.length < 2) return c.json({ error: 'Isi nama bisnis.' }, 400);
-    const baseline = cleanReviews(input);
-    if (baseline?.error) return c.json({ error: baseline.error }, 400);
-    const target = await destination(c, { link: input.link });
-    if (!target.ok) return c.json({ error: target.error }, 400);
-
-    const pin = randomPin();
-    const { trial } = await activateCard(c, card, { name, target, pin, baseline });
-    return c.json({ ok: true, code: card.code, name, pin, kind: target.kind, reviewUrl: target.url, trial, trialDays: TRIAL_DAYS });
+    if (card.business_id) return c.json({ error: 'Kartu ini sudah aktif. Ganti tujuannya di data bisnisnya.' }, 409);
+    return activateForBuyer(c, card, input, 'admin');
   });
 
   app.put('/api/admin/businesses/:id', requireAdmin, async (c) => {
     const business = await businessById(c, Number(c.req.param('id')));
     if (!business) return c.json({ error: 'Bisnis tidak ditemukan.' }, 404);
-    const { name, link } = await body(c);
+    return editBusiness(c, business);
+  });
+
+  app.post('/api/admin/businesses/:id/pin', requireAdmin, async (c) => {
+    const business = await businessById(c, Number(c.req.param('id')));
+    if (!business) return c.json({ error: 'Bisnis tidak ditemukan.' }, 404);
+    return renewBusinessPin(c, business);
+  });
+
+  // Jalan keluar bila kartu salah diaktifkan. Kartu kembali kosong dan siap dijual lagi.
+  app.post('/api/admin/cards/reset', requireAdmin, async (c) => {
+    const card = await cardByCode(c, (await body(c)).code);
+    if (!card?.business_id) return c.json({ error: 'Kartu aktif dengan kode itu tidak ditemukan.' }, 404);
+    await clearCard(c, card);
+    return c.json({ ok: true });
+  });
+
+  app.post('/api/admin/resellers', requireAdmin, async (c) => {
+    const { name, whatsapp, city } = await body(c);
     const cleanName = cleanText(name, 80);
-    if (cleanName.length < 2) return c.json({ error: 'Isi nama bisnis.' }, 400);
-    if (!link || link === business.review_url) {
-      await run(c, 'UPDATE businesses SET name = ? WHERE id = ?', cleanName, business.id);
-      return c.json({ ok: true, url: business.review_url, kind: business.link_kind });
+    if (cleanName.length < 2) return c.json({ error: 'Isi nama reseller.' }, 400);
+    const number = cleanWhatsapp(whatsapp);
+    if (!number) return c.json({ error: 'Nomor WhatsApp tidak valid. Contoh: 081234567890.' }, 400);
+    if (await first(c, 'SELECT id FROM resellers WHERE whatsapp = ?', number)) {
+      return c.json({ error: 'Nomor ini sudah terdaftar sebagai reseller.' }, 409);
     }
-    const target = await destination(c, { link });
-    if (!target.ok) return c.json({ error: target.error }, 400);
-    await run(c, 'UPDATE businesses SET name = ?, review_url = ?, link_kind = ?, place_id = ? WHERE id = ?',
-      cleanName, target.url, target.kind, target.placeId ?? null, business.id);
-    await resetBeforeAfter(c, business.id, target.placeId);
-    return c.json({ ok: true, url: target.url, kind: target.kind });
+    const pin = randomPin();
+    await run(c, 'INSERT INTO resellers (name, whatsapp, city, pin_hash, created_at) VALUES (?, ?, ?, ?, ?)',
+      cleanName, number, cleanText(city, 60), await hashPin(pin, iterations(c)), Date.now());
+    return c.json({ ok: true, name: cleanName, whatsapp: number, pin });
+  });
+
+  app.put('/api/admin/resellers/:id', requireAdmin, async (c) => {
+    const reseller = await resellerById(c, Number(c.req.param('id')));
+    if (!reseller) return c.json({ error: 'Reseller tidak ditemukan.' }, 404);
+    const { name, whatsapp, city } = await body(c);
+    const cleanName = cleanText(name, 80);
+    if (cleanName.length < 2) return c.json({ error: 'Isi nama reseller.' }, 400);
+    const number = cleanWhatsapp(whatsapp);
+    if (!number) return c.json({ error: 'Nomor WhatsApp tidak valid. Contoh: 081234567890.' }, 400);
+    if (await first(c, 'SELECT id FROM resellers WHERE whatsapp = ? AND id <> ?', number, reseller.id)) {
+      return c.json({ error: 'Nomor ini sudah terdaftar sebagai reseller.' }, 409);
+    }
+    await run(c, 'UPDATE resellers SET name = ?, whatsapp = ?, city = ? WHERE id = ?', cleanName, number, cleanText(city, 60), reseller.id);
+    return c.json({ ok: true });
+  });
+
+  app.post('/api/admin/resellers/:id/status', requireAdmin, async (c) => {
+    const reseller = await resellerById(c, Number(c.req.param('id')));
+    if (!reseller) return c.json({ error: 'Reseller tidak ditemukan.' }, 404);
+    const { active } = await body(c);
+    await run(c, 'UPDATE resellers SET active = ? WHERE id = ?', active ? 1 : 0, reseller.id);
+    if (!active) await run(c, "DELETE FROM sessions WHERE kind = 'reseller' AND business_id = ?", reseller.id);
+    return c.json({ ok: true });
+  });
+
+  app.post('/api/admin/resellers/:id/pin', requireAdmin, async (c) => {
+    const reseller = await resellerById(c, Number(c.req.param('id')));
+    if (!reseller) return c.json({ error: 'Reseller tidak ditemukan.' }, 404);
+    const pin = randomPin();
+    await run(c, 'UPDATE resellers SET pin_hash = ?, failed_pins = 0, locked_until = 0 WHERE id = ?',
+      await hashPin(pin, iterations(c)), reseller.id);
+    await run(c, "DELETE FROM sessions WHERE kind = 'reseller' AND business_id = ?", reseller.id);
+    return c.json({ ok: true, name: reseller.name, whatsapp: reseller.whatsapp, pin });
+  });
+
+  // Kartu yang sudah terjual tidak ikut pindah, supaya riwayat penjualan reseller tetap benar.
+  app.post('/api/admin/resellers/cards', requireAdmin, async (c) => {
+    const { resellerId, batchId, codes } = await body(c);
+    const target = Number(resellerId) || null;
+    if (target && !await resellerById(c, target)) return c.json({ error: 'Reseller tidak ditemukan.' }, 404);
+
+    if (batchId) {
+      const result = await run(c, `UPDATE cards SET reseller_id = ? WHERE batch_id = ? AND business_id IS NULL${target ? ' AND reseller_id IS NULL' : ''}`,
+        target, Number(batchId));
+      return c.json({ ok: true, moved: result.meta.changes, skipped: 0 });
+    }
+    const list = [...new Set(String(codes ?? '').split(/[\s,;]+/).map(normalizeCode).filter(Boolean))];
+    if (!list.length) return c.json({ error: 'Isi kode kartu atau pilih batch.' }, 400);
+    if (list.length > 500) return c.json({ error: 'Maksimal 500 kode sekali simpan.' }, 400);
+    const statement = c.env.DB.prepare('UPDATE cards SET reseller_id = ? WHERE code = ? AND business_id IS NULL');
+    const results = await c.env.DB.batch(list.map((code) => statement.bind(target, code)));
+    const moved = results.reduce((sum, result) => sum + result.meta.changes, 0);
+    return c.json({ ok: true, moved, skipped: list.length - moved });
   });
 
   app.post('/api/admin/batches', requireAdmin, async (c) => {
@@ -734,6 +880,83 @@ export function createApp() {
     c.header('Content-Type', 'text/csv; charset=utf-8');
     c.header('Content-Disposition', `attachment; filename="batch-${id}.csv"`);
     return c.body(['kode,kode_aktivasi,url_nfc,url_qr', ...lines].join('\n'));
+  });
+
+  // ---------- Reseller ----------
+
+  app.get('/reseller', (c) => sendPage(c, 'reseller.html'));
+
+  app.post('/api/reseller/login', async (c) => {
+    const blocked = await tooMany(c, 'reseller-login', 20, 15 * 60_000);
+    if (blocked) return blocked;
+    const { whatsapp, pin } = await body(c);
+    const wrong = 'Nomor WhatsApp atau PIN salah.';
+    const reseller = await first(c, 'SELECT * FROM resellers WHERE whatsapp = ? AND active = 1', cleanWhatsapp(whatsapp) ?? '');
+    if (!reseller) return c.json({ error: wrong }, 401);
+    const rejected = await rejectPin(c, 'resellers', reseller, pin, { wrong, lockedHint: ', atau minta PIN baru ke admin' });
+    if (rejected) return rejected;
+    startCookie(c, RESELLER_COOKIE, await createSession(c.env.DB, 'reseller', reseller.id, 30 * DAY), 30 * DAY);
+    return c.json({ ok: true });
+  });
+
+  app.post('/api/reseller/logout', async (c) => {
+    await destroySession(c.env.DB, getCookie(c, RESELLER_COOKIE));
+    deleteCookie(c, RESELLER_COOKIE, { path: '/' });
+    return c.json({ ok: true });
+  });
+
+  app.get('/api/reseller/me', requireReseller, async (c) => {
+    const { id, name, whatsapp, city } = c.get('reseller');
+    const stock = await all(c, `
+      SELECT code, activation_code AS activationCode FROM cards
+      WHERE reseller_id = ? AND business_id IS NULL ORDER BY id LIMIT 1000`, id);
+    const sold = await all(c, `
+      SELECT c.code, c.activation_code AS activationCode, c.activated_at AS activatedAt, c.activated_via AS via,
+        b.id AS businessId, b.name AS businessName, b.review_url AS reviewUrl, b.link_kind AS linkKind
+      FROM cards c JOIN businesses b ON b.id = c.business_id
+      WHERE c.reseller_id = ? ORDER BY c.activated_at DESC LIMIT 1000`, id);
+    return c.json({ reseller: { name, whatsapp, city }, stock, sold });
+  });
+
+  app.post('/api/reseller/activate', requireReseller, async (c) => {
+    const { id } = c.get('reseller');
+    const blocked = await tooMany(c, 'reseller-activate', 30, 15 * 60_000, id);
+    if (blocked) return blocked;
+    const input = await body(c);
+    const card = await cardByCode(c, input.code);
+    if (card?.reseller_id !== id) return c.json({ error: 'Kode kartu ini tidak ada di stok Anda.' }, 404);
+    if (card.business_id) return c.json({ error: 'Kartu ini sudah aktif. Ganti tujuannya di Riwayat.' }, 409);
+    return activateForBuyer(c, card, input, 'reseller');
+  });
+
+  // Reseller hanya menyentuh bisnis yang dia aktifkan sendiri, bukan kartu yang diaktifkan pembeli.
+  const sellerBusiness = (c) => first(c, `
+    SELECT b.* FROM businesses b WHERE b.id = ? AND EXISTS (
+      SELECT 1 FROM cards k WHERE k.business_id = b.id AND k.reseller_id = ? AND k.activated_via = 'reseller')`,
+    Number(c.req.param('id')), c.get('reseller').id);
+
+  app.put('/api/reseller/businesses/:id', requireReseller, async (c) => {
+    const business = await sellerBusiness(c);
+    if (!business) return c.json({ error: 'Bisnis ini bukan aktivasi Anda.' }, 404);
+    return editBusiness(c, business);
+  });
+
+  app.post('/api/reseller/businesses/:id/pin', requireReseller, async (c) => {
+    const business = await sellerBusiness(c);
+    if (!business) return c.json({ error: 'Bisnis ini bukan aktivasi Anda.' }, 404);
+    return renewBusinessPin(c, business);
+  });
+
+  app.post('/api/reseller/pin', requireReseller, async (c) => {
+    const reseller = c.get('reseller');
+    const blocked = await tooMany(c, 'reseller-pin', 8, 15 * 60_000, reseller.id);
+    if (blocked) return blocked;
+    const { currentPin, newPin } = await body(c);
+    if (!await verifyPin(String(currentPin ?? ''), reseller.pin_hash)) return c.json({ error: 'PIN lama salah.' }, 403);
+    const badPin = pinProblem(newPin);
+    if (badPin) return c.json({ error: badPin }, 400);
+    await run(c, 'UPDATE resellers SET pin_hash = ? WHERE id = ?', await hashPin(newPin, iterations(c)), reseller.id);
+    return c.json({ ok: true });
   });
 
   app.get('/', (c) => sendPage(c, 'home.html'));

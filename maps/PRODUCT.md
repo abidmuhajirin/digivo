@@ -8,7 +8,8 @@ Kartu fisik NFC + QR untuk usaha lokal Indonesia. Pelanggan menempelkan ponsel, 
 ## Pengguna
 - Pemilik usaha kecil: warung, kafe, salon, bengkel, klinik. Memakai ponsel, sering Android kelas menengah, di sela melayani pelanggan.
 - Pelanggan: hanya melihat kartu dan halaman singkat. Harus selesai dalam hitungan detik.
-- Penjual (pemilik proyek): mencetak batch, memantau stok, mengubah paket.
+- Penjual (pemilik proyek): mencetak batch, memantau stok, mengubah paket, mendaftarkan reseller.
+- Reseller: membawa stok kartu, mengaktifkan kartu untuk pembeli, melihat riwayat penjualan.
 
 ## Prinsip
 - Aktivasi kurang dari satu menit tanpa bantuan.
@@ -16,4 +17,4 @@ Kartu fisik NFC + QR untuk usaha lokal Indonesia. Pelanggan menempelkan ponsel, 
 - Angka di dasbor hanya data nyata.
 
 ## Arah visual
-Mengikuti referensi Wealthio: lembar krem di atas hitam, kartu gradien koral-oranye, tombol pil dengan semburan warna, bar kapsul, tiket berlubang.
+Sistem desain KasirBosku dengan tone warna Google. Lihat DESIGN.md.

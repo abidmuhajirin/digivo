@@ -3,14 +3,14 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#101011">
+<meta name="theme-color" content="#ffffff">
 <meta name="robots" content="noindex">
 <title>Admin - {{BRAND}}</title>
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="/css/app.css">
 </head>
 <body>
-<main class="admin" id="admin">
+<main class="wrap app-main stack" id="admin">
   <form id="admin-login" class="panel stack-sm">
     <h2>Admin {{BRAND}}</h2>
     <label class="field"><span>Kata sandi</span><input name="password" type="password" required autocomplete="current-password"></label>
@@ -18,6 +18,12 @@
     <button class="cta" type="submit">Masuk</button>
   </form>
 </main>
+<nav class="dock" aria-label="Menu admin" hidden>
+  <button data-tab="jual"><svg class="i" aria-hidden="true"><use href="/icons.svg#plus"/></svg>Aktivasi</button>
+  <button data-tab="kartu"><svg class="i" aria-hidden="true"><use href="/icons.svg#card"/></svg>Kartu</button>
+  <button data-tab="reseller"><svg class="i" aria-hidden="true"><use href="/icons.svg#share"/></svg>Reseller</button>
+  <button data-tab="bisnis"><svg class="i" aria-hidden="true"><use href="/icons.svg#home"/></svg>Bisnis</button>
+</nav>
 <script type="module" src="/js/admin.js"></script>
 </body>
 </html>

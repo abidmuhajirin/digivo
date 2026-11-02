@@ -8,6 +8,7 @@
     "dev": "wrangler dev --port 3000",
     "deploy": "wrangler deploy",
     "db:init": "wrangler d1 execute digivo-maps-db --remote --file=schema.sql",
+    "db:migrate": "wrangler d1 execute digivo-maps-db --remote --file=migrations/002-reseller.sql",
     "db:init:local": "wrangler d1 execute digivo-maps-db --local --file=schema.sql",
     "seed:local": "node scripts/seed-local.js && wrangler d1 execute digivo-maps-db --local --file=.wrangler/seed.sql",
     "backup": "wrangler d1 export digivo-maps-db --remote --output=backup.sql",

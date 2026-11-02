@@ -10,6 +10,8 @@ let placeId = null;
 
 const codeFromPath = location.pathname.split('/')[2];
 if (codeFromPath) form.code.value = codeFromPath;
+// QR di lembar aktivasi membawa kodenya di fragmen, jadi pembeli online tidak perlu mengetik.
+if (location.hash.length > 1) form.activationCode.value = location.hash.slice(1);
 (codeFromPath ? form.activationCode : form.code).focus();
 
 const config = await api('/api/config').catch(() => ({ placesEnabled: false }));
@@ -86,7 +88,7 @@ bindForm(form, async (values) => {
       </dl>
     </article>
     <a class="cta" href="${esc(result.reviewUrl)}" target="_blank" rel="noopener">Buka halaman ulasan</a>
-    <a class="btn" href="/app">Kelola kartu</a>
+    <a class="btn" href="/app">Buka dasbor</a>
     <p class="muted">Tempelkan ponsel ke kartu sekali lagi untuk mengujinya. Simpan lembar aktivasi di tempat aman.</p>`;
   scrollTo({ top: 0 });
 });

@@ -39,7 +39,7 @@ function endTrial(card) {
 
 before(async () => {
   db = createD1();
-  const batch = await createBatch(db, 16);
+  const batch = await createBatch(db, 24);
   cards = db.sqlite.prepare('SELECT * FROM cards WHERE batch_id = ?').all(batch);
   env = { DB: db, ASSETS: fileAssets, BRAND: 'Uji', BASE_URL: 'http://test', ADMIN_PASSWORD: 'sandi-uji' };
 });
@@ -129,7 +129,11 @@ test('before-after manual, data Pro tetap tersimpan saat turun paket', async () 
 
   endTrial(card);
   assert.equal((await (await call('/api/stats', { cookie })).json()).beforeAfter, undefined);
-  assert.equal((await call('/api/reviews', { method: 'POST', cookie, body: { reviewCount: '1' } })).status, 402);
+  const basic = await call('/api/reviews', { method: 'POST', cookie, body: { reviewCount: '50', rating: '4,9' } });
+  assert.equal(basic.status, 200, 'Basic tetap bisa mencatat ulasan');
+  stats = await (await call('/api/stats', { cookie })).json();
+  assert.equal(stats.reviews.count, 50);
+  assert.equal(stats.reviews.rating, 4.9);
 });
 
 test('before-after otomatis dari Google saat aktivasi', async () => {
@@ -345,4 +349,136 @@ test('pemilik tidak bisa menyentuh kartu bisnis lain, admin butuh sesi', async (
   assert.equal((await call(`/api/cards/${foreign.id}`, { method: 'PATCH', cookie, body: { label: 'x' } })).status, 404);
   assert.equal((await call('/api/admin/overview')).status, 401);
   assert.equal((await call('/admin/batch/1.csv')).status, 302);
+});
+
+const adminLogin = async () => (await call('/api/admin/login', { method: 'POST', body: { password: 'sandi-uji' } })).headers.get('set-cookie').split(';')[0];
+
+async function newReseller(adminCookie, whatsapp) {
+  const res = await call('/api/admin/resellers', { method: 'POST', cookie: adminCookie, body: { name: 'Reseller Uji', whatsapp, city: 'Bandung' } });
+  const created = await res.json();
+  const login = await call('/api/reseller/login', { method: 'POST', body: { whatsapp, pin: created.pin } });
+  assert.equal(login.status, 200);
+  return { ...created, cookie: login.headers.get('set-cookie').split(';')[0] };
+}
+
+test('reseller: daftar, terima kartu, aktivasi, tercatat, dan pembeli terkunci', async () => {
+  const admin = await adminLogin();
+  const one = await newReseller(admin, '0812-3456-7890');
+  assert.equal(one.whatsapp, '6281234567890');
+  assert.equal((await call('/api/admin/resellers', { method: 'POST', cookie: admin, body: { name: 'Dobel', whatsapp: '+62 812 3456 7890' } })).status, 409);
+  assert.equal((await call('/api/admin/resellers', { method: 'POST', body: { name: 'X Y', whatsapp: '081299990000' } })).status, 401);
+  const { resellers } = await (await call('/api/admin/overview', { cookie: admin })).json();
+  const row = resellers.find((r) => r.whatsapp === one.whatsapp);
+
+  const [mine, foreign] = [cards[16], cards[17]];
+  const moved = await (await call('/api/admin/resellers/cards', {
+    method: 'POST', cookie: admin, body: { resellerId: row.id, codes: `${mine.code}, TIDAKADA` },
+  })).json();
+  assert.deepEqual([moved.moved, moved.skipped], [1, 1]);
+
+  const blocked = await call('/api/reseller/activate', { method: 'POST', cookie: one.cookie, body: { code: foreign.code, name: 'Toko X', link: REVIEW } });
+  assert.equal(blocked.status, 404, 'kartu di luar stok ditolak');
+  assert.equal((await call('/api/reseller/activate', { method: 'POST', body: { code: mine.code, name: 'Toko X', link: REVIEW } })).status, 401);
+
+  const sold = await (await call('/api/reseller/activate', {
+    method: 'POST', cookie: one.cookie, body: { code: mine.code, name: 'Toko Reseller', link: REVIEW, reviewCount: '20', rating: '4,8' },
+  })).json();
+  assert.match(sold.pin, /^\d{6}$/);
+  assert.equal((await call(`/t/${mine.code}`)).headers.get('location'), REVIEW);
+
+  const history = await (await call('/api/reseller/me', { cookie: one.cookie })).json();
+  assert.equal(history.stock.length, 0);
+  assert.equal(history.sold[0].code, mine.code);
+  assert.equal(history.sold[0].activationCode, mine.activation_code);
+  assert.equal(history.sold[0].businessName, 'Toko Reseller');
+  assert.equal(history.sold[0].via, 'reseller');
+
+  const owner = (await call('/api/login', { method: 'POST', body: { code: mine.code, pin: sold.pin } })).headers.get('set-cookie').split(';')[0];
+  const me = await (await call('/api/me', { cookie: owner })).json();
+  assert.equal(me.business.linkLocked, true);
+  assert.equal(me.sellerWa, one.whatsapp);
+  const stats = await (await call('/api/stats', { cookie: owner })).json();
+  assert.equal(stats.reviews.rating, 4.8);
+
+  assert.equal((await call('/api/me', { method: 'PUT', cookie: owner, body: { link: 'https://g.page/r/CLAIN/review' } })).status, 403);
+  assert.equal((await call('/api/me', { method: 'PUT', cookie: owner, body: { name: 'Nama Baru', link: REVIEW } })).status, 200, 'nama tetap bisa diganti');
+  assert.equal((await call(`/api/cards/${me.cards[0].id}/reset`, { method: 'POST', cookie: owner, body: { pin: sold.pin } })).status, 403, 'reset membuka celah ganti link');
+
+  const id = history.sold[0].businessId;
+  const next = 'https://g.page/r/CRESELLER/review';
+  assert.equal((await call(`/api/reseller/businesses/${id}`, { method: 'PUT', cookie: one.cookie, body: { name: 'Toko Reseller', link: next } })).status, 200);
+  assert.equal((await call(`/q/${mine.code}`)).headers.get('location'), next);
+
+  const renewed = await (await call(`/api/reseller/businesses/${id}/pin`, { method: 'POST', cookie: one.cookie })).json();
+  assert.equal((await call('/api/me', { cookie: owner })).status, 401, 'PIN baru mengakhiri sesi lama');
+  assert.equal((await call('/api/login', { method: 'POST', body: { code: mine.code, pin: renewed.pin } })).status, 200);
+});
+
+test('reseller tidak bisa menyentuh bisnis orang lain atau aktivasi mandiri', async () => {
+  const admin = await adminLogin();
+  const a = await newReseller(admin, '081200000001');
+  const b = await newReseller(admin, '081200000002');
+  const list = (await (await call('/api/admin/overview', { cookie: admin })).json()).resellers;
+  const idOf = (r) => list.find((row) => row.whatsapp === r.whatsapp).id;
+
+  const [sold, self] = [cards[18], cards[19]];
+  await call('/api/admin/resellers/cards', { method: 'POST', cookie: admin, body: { resellerId: idOf(a), codes: `${sold.code} ${self.code}` } });
+  await call('/api/reseller/activate', { method: 'POST', cookie: a.cookie, body: { code: sold.code, name: 'Toko A', link: REVIEW } });
+  await activate(self, 'Toko Mandiri');
+
+  const history = await (await call('/api/reseller/me', { cookie: a.cookie })).json();
+  const bizA = history.sold.find((row) => row.code === sold.code).businessId;
+  const bizSelf = history.sold.find((row) => row.code === self.code);
+  assert.equal(bizSelf.via, 'self', 'kartu reseller yang diaktifkan pembeli tetap tercatat');
+
+  assert.equal((await call(`/api/reseller/businesses/${bizA}`, { method: 'PUT', cookie: b.cookie, body: { name: 'Curian', link: REVIEW } })).status, 404);
+  assert.equal((await call(`/api/reseller/businesses/${bizSelf.businessId}/pin`, { method: 'POST', cookie: a.cookie })).status, 404);
+
+  // Kartu terjual tidak boleh pindah pemilik, supaya riwayat tidak berubah.
+  const moved = await (await call('/api/admin/resellers/cards', { method: 'POST', cookie: admin, body: { resellerId: idOf(b), codes: sold.code } })).json();
+  assert.equal(moved.moved, 0);
+
+  await call(`/api/admin/resellers/${idOf(a)}/status`, { method: 'POST', cookie: admin, body: { active: false } });
+  assert.equal((await call('/api/reseller/me', { cookie: a.cookie })).status, 401, 'nonaktif langsung keluar');
+  assert.equal((await call('/api/reseller/login', { method: 'POST', body: { whatsapp: a.whatsapp, pin: a.pin } })).status, 401);
+});
+
+test('reseller: PIN salah terkunci, batch masuk stok, admin bisa mengosongkan kartu salah aktivasi', async () => {
+  const admin = await adminLogin();
+  const r = await newReseller(admin, '081200000003');
+  for (let i = 0; i < 5; i++) {
+    assert.equal((await call('/api/reseller/login', { method: 'POST', body: { whatsapp: r.whatsapp, pin: '000001' } })).status, 401);
+  }
+  assert.equal((await call('/api/reseller/login', { method: 'POST', body: { whatsapp: r.whatsapp, pin: r.pin } })).status, 429);
+  const { id } = db.sqlite.prepare('SELECT id FROM resellers WHERE whatsapp = ?').get(r.whatsapp);
+  const { pin } = await (await call(`/api/admin/resellers/${id}/pin`, { method: 'POST', cookie: admin })).json();
+  const login = await call('/api/reseller/login', { method: 'POST', body: { whatsapp: r.whatsapp, pin } });
+  assert.equal(login.status, 200);
+
+  const batch = await createBatch(db, 3);
+  const moved = await (await call('/api/admin/resellers/cards', { method: 'POST', cookie: admin, body: { resellerId: id, batchId: batch } })).json();
+  assert.equal(moved.moved, 3);
+  const cookie = login.headers.get('set-cookie').split(';')[0];
+  const { stock } = await (await call('/api/reseller/me', { cookie })).json();
+  assert.equal(stock.length, 3);
+
+  await call('/api/reseller/activate', { method: 'POST', cookie, body: { code: stock[0].code, name: 'Salah Kartu', link: REVIEW } });
+  assert.equal((await call('/api/admin/cards/reset', { method: 'POST', cookie: admin, body: { code: stock[0].code } })).status, 200);
+  const after = await (await call('/api/reseller/me', { cookie })).json();
+  assert.equal(after.stock.length, 3, 'kartu kembali ke stok reseller');
+  assert.equal(db.sqlite.prepare("SELECT COUNT(*) n FROM businesses WHERE name = 'Salah Kartu'").get().n, 0);
+
+  const back = await (await call('/api/admin/resellers/cards', { method: 'POST', cookie: admin, body: { resellerId: 0, batchId: batch } })).json();
+  assert.equal(back.moved, 3, 'kartu bisa ditarik ke stok pusat');
+});
+
+test('admin: aktivasi membuat tujuan terkunci, aktivasi mandiri tetap bebas', async () => {
+  const admin = await adminLogin();
+  const card = cards[20];
+  const made = await (await call('/api/admin/activate', { method: 'POST', cookie: admin, body: { code: card.code, name: 'Toko Admin', link: REVIEW } })).json();
+  const owner = (await call('/api/login', { method: 'POST', body: { code: card.code, pin: made.pin } })).headers.get('set-cookie').split(';')[0];
+  assert.equal((await call('/api/me', { method: 'PUT', cookie: owner, body: { link: 'https://g.page/r/CLAIN/review' } })).status, 403);
+
+  const { cookie } = await activate(cards[21]);
+  assert.equal((await call('/api/me', { method: 'PUT', cookie, body: { link: 'https://g.page/r/CLAIN/review' } })).status, 200);
 });

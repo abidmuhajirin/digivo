@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#ffffff">
+<meta name="robots" content="noindex">
+<title>Reseller - {{BRAND}}</title>
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/css/app.css">
+</head>
+<body>
+<main class="wrap app-main stack" id="reseller">
+  <form id="reseller-login" class="panel stack-sm">
+    <h2>Masuk reseller</h2>
+    <label class="field"><span>Nomor WhatsApp</span><input name="whatsapp" inputmode="tel" maxlength="20" required placeholder="08xxxxxxxxxx" autocomplete="username"></label>
+    <label class="field"><span>PIN</span><input class="pin" name="pin" type="password" inputmode="numeric" maxlength="6" required autocomplete="current-password"></label>
+    <p class="form-msg" role="alert"></p>
+    <button class="cta" type="submit">Masuk</button>
+    <p class="muted">Belum terdaftar atau lupa PIN? Hubungi admin.</p>
+  </form>
+</main>
+<nav class="dock" aria-label="Menu reseller" hidden>
+  <button data-tab="aktivasi"><svg class="i" aria-hidden="true"><use href="/icons.svg#plus"/></svg>Aktivasi</button>
+  <button data-tab="stok"><svg class="i" aria-hidden="true"><use href="/icons.svg#card"/></svg>Stok</button>
+  <button data-tab="riwayat"><svg class="i" aria-hidden="true"><use href="/icons.svg#chat"/></svg>Riwayat</button>
+  <button data-tab="akun"><svg class="i" aria-hidden="true"><use href="/icons.svg#sliders"/></svg>Akun</button>
+</nav>
+<script type="module" src="/js/reseller.js"></script>
+</body>
+</html>
