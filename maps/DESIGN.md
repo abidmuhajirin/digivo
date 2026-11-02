@@ -4,6 +4,12 @@
 
 **Theme:** light · **Mode:** Operate, kecuali halaman depan (Persuade). Khusus ponsel, lebar kolom maksimal 480px.
 
+## Halaman depan
+
+Halaman depan punya sistem sendiri di `public/css/home.css` dan tidak memuat `app.css`, jadi perubahannya tidak menyentuh dasbor. Isi bagian di bawah ini hanya berlaku untuk aplikasi.
+
+Polanya: blok biru penuh di atas, empat tombol lingkaran kuning, lembar putih dengan tab melengkung, kartu navy berisi contoh dasbor. Warna: biru `#0a6cf5`, ungu `#cb80f5`, kuning `#ffd93b`, koral `#f27b76`, navy `#101d4a`, latar `#eef2fa`. Semua angka contoh wajib berlabel contoh.
+
 ## Warna
 
 Token ada di `:root`, `public/css/app.css`.

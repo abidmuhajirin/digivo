@@ -3,77 +3,62 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#f3f3ef">
+<meta name="theme-color" content="#0a6cf5">
 <title>{{BRAND}} - Kartu ulasan Google untuk usaha Anda</title>
 <meta name="description" content="Kartu NFC dan QR yang membuka halaman ulasan Google dengan satu tempelan ponsel.">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="preload" href="/fonts/archivo.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="/css/app.css">
+<link rel="stylesheet" href="/css/home.css">
 </head>
 <body data-wa="{{ADMIN_WA}}">
-<header class="sheet home-sheet">
-  <nav class="home-nav" aria-label="Utama">
+<header class="hero">
+  <nav class="nav" aria-label="Utama">
     <a class="wordmark" href="/"><svg class="i" aria-hidden="true"><use href="/icons.svg#tap"/></svg>{{BRAND}}</a>
-    <a href="/kelola">Masuk</a>
+    <a class="pill-link" href="/kelola">Masuk</a>
   </nav>
-  <div class="home-hero">
-    <div class="folder score-card hero-block">
-      <h1>Satu tempelan, satu ulasan Google.</h1>
-      <form class="code-form" id="code-form">
-        <input name="code" aria-label="Kode kartu" placeholder="Kode di kartu" maxlength="10" autocomplete="off" required>
-        <button class="btn" type="submit">Aktifkan</button>
-      </form>
-    </div>
-    <p class="hero-lede">Pelanggan puas sering lupa memberi ulasan. Dengan kartu ini, cukup tempelkan ponsel dan halaman ulasan bisnis Anda terbuka. Ponsel tanpa NFC tinggal memindai QR di sebelahnya.</p>
-    <figure class="standee-hero">
-      <div class="standee-face">
-        <div class="standee-face-head">
-          <svg viewBox="0 0 48 48" aria-hidden="true"><use href="/icons.svg#google-g"/></svg>
-          <div>
-            <p class="standee-face-title">Bantu kami dengan ulasan Google</p>
-            <svg class="stars" viewBox="0 0 120 22" aria-hidden="true"><use href="/icons.svg#stars5"/></svg>
-          </div>
-        </div>
-        <div class="standee-face-panel">
-          <div><span class="standee-face-ring"><svg class="i" aria-hidden="true"><use href="/icons.svg#tap"/></svg></span><b>Tempel HP</b></div>
-          <small>atau</small>
-          <div><img src="/contoh-qr.svg" width="88" height="88" alt="" fetchpriority="high"><b>Scan QR</b></div>
-        </div>
-      </div>
-      <figcaption>Kartu akrilik 10 x 10 cm</figcaption>
-    </figure>
+  <h1>Satu tempelan, satu ulasan Google.</h1>
+  <p>Pelanggan puas sering lupa memberi ulasan. Dengan kartu ini, cukup tempelkan ponsel dan halaman ulasan bisnis Anda terbuka. Ponsel tanpa NFC tinggal memindai QR di sebelahnya.</p>
+  <div class="actions">
+    <a class="action" href="#aktifkan"><span><svg class="i" aria-hidden="true"><use href="/icons.svg#plus"/></svg></span>Aktifkan</a>
+    <a class="action" href="#tab-cara" data-show="cara"><span><svg class="i" aria-hidden="true"><use href="/icons.svg#tap"/></svg></span>Cara kerja</a>
+    <a class="action" href="#tab-paket" data-show="paket"><span><svg class="i" aria-hidden="true"><use href="/icons.svg#card"/></svg></span>Paket</a>
+    <a class="action" data-wa-link="Halo, saya mau pesan kartu ulasan." href="/kelola"><span><svg class="i" aria-hidden="true"><use href="/icons.svg#chat"/></svg></span>Pesan</a>
   </div>
 </header>
 
-<main class="home-body">
-  <section>
-    <h2>Dari kotak sampai ulasan pertama</h2>
-    <div class="folders">
-      <article class="folder f-yellow flow-step">
-        <div class="round"><svg class="i" aria-hidden="true"><use href="/icons.svg#card"/></svg></div>
-        <div><h3>Aktifkan kartu</h3><p>Masukkan kode, tempel link Google Maps bisnis, buat PIN. Selesai dalam semenit.</p></div>
-      </article>
-      <article class="folder f-green flow-step">
-        <div class="round"><svg class="i" aria-hidden="true"><use href="/icons.svg#tap"/></svg></div>
-        <div><h3>Letakkan di kasir</h3><p>Satu usaha bisa punya banyak kartu: per meja, per kasir, per cabang.</p></div>
-      </article>
-      <article class="folder f-red flow-step">
-        <div class="round"><svg class="i" aria-hidden="true"><use href="/icons.svg#open"/></svg></div>
-        <div><h3>Pelanggan menempel</h3><p>Tanpa instal aplikasi. Google terbuka dan pelanggan tinggal menulis.</p></div>
-      </article>
-      <article class="folder f-blue flow-step">
-        <div class="round"><svg class="i" aria-hidden="true"><use href="/icons.svg#chat"/></svg></div>
-        <div><h3>Pantau hasilnya</h3><p>Lihat rating dan jumlah ulasan, jumlah tap, jam ramai, dan pesan privat pelanggan.</p></div>
-      </article>
-    </div>
-  </section>
+<main>
+  <div class="tabs" role="tablist" aria-label="Info kartu" data-active="cara">
+    <button class="tab" id="tab-cara" role="tab" aria-controls="panel-cara" aria-selected="true">Cara kerja</button>
+    <button class="tab" id="tab-paket" role="tab" aria-controls="panel-paket" aria-selected="false" tabindex="-1">Paket</button>
+  </div>
 
-  <section>
-    <h2>Paket</h2>
-    <div class="plans">
-      <article class="folder f-white plan">
-        <h3>Basic</h3>
-        <div class="plan-price">Rp99.000 <small>per kartu, sekali bayar</small></div>
+  <div class="sheet">
+    <section id="panel-cara" role="tabpanel" aria-labelledby="tab-cara">
+      <h2>Dari kotak sampai ulasan pertama</h2>
+      <ol class="steps">
+        <li>
+          <span class="dot dot-blue"><svg class="i" aria-hidden="true"><use href="/icons.svg#card"/></svg></span>
+          <div><h3>Aktifkan kartu</h3><p>Masukkan kode, tempel link Google Maps bisnis, buat PIN. Selesai dalam semenit.</p></div>
+        </li>
+        <li>
+          <span class="dot dot-yellow"><svg class="i" aria-hidden="true"><use href="/icons.svg#tap"/></svg></span>
+          <div><h3>Letakkan di kasir</h3><p>Satu usaha bisa punya banyak kartu: per meja, per kasir, per cabang.</p></div>
+        </li>
+        <li>
+          <span class="dot dot-purple"><svg class="i" aria-hidden="true"><use href="/icons.svg#open"/></svg></span>
+          <div><h3>Pelanggan menempel</h3><p>Tanpa instal aplikasi. Google terbuka dan pelanggan tinggal menulis.</p></div>
+        </li>
+        <li>
+          <span class="dot dot-coral"><svg class="i" aria-hidden="true"><use href="/icons.svg#chat"/></svg></span>
+          <div><h3>Pantau hasilnya</h3><p>Lihat rating dan jumlah ulasan, jumlah tap, jam ramai, dan pesan privat pelanggan.</p></div>
+        </li>
+      </ol>
+    </section>
+
+    <section id="panel-paket" role="tabpanel" aria-labelledby="tab-paket" hidden>
+      <h2>Pilih paket</h2>
+      <article class="plan plan-yellow">
+        <div class="plan-head"><h3>Basic</h3><p class="price"><b>Rp99.000</b>per kartu, sekali bayar</p></div>
         <ul>
           <li><svg class="i" aria-hidden="true"><use href="/icons.svg#check"/></svg>NFC dan QR dalam satu kartu</li>
           <li><svg class="i" aria-hidden="true"><use href="/icons.svg#check"/></svg>Tujuan kartu bisa diganti tanpa cetak ulang</li>
@@ -81,11 +66,10 @@
           <li><svg class="i" aria-hidden="true"><use href="/icons.svg#check"/></svg>Hitungan tap 7 hari terakhir</li>
           <li><svg class="i" aria-hidden="true"><use href="/icons.svg#check"/></svg>Gratis trial Pro 7 hari</li>
         </ul>
-        <a class="btn" data-wa-link="Halo, saya mau pesan kartu ulasan paket Basic." href="/kelola">Pesan via WhatsApp</a>
+        <a class="plan-btn" data-wa-link="Halo, saya mau pesan kartu ulasan paket Basic." href="/kelola">Pesan via WhatsApp</a>
       </article>
-      <article class="folder f-blue plan">
-        <h3>Pro</h3>
-        <div class="plan-price">Rp49.000 <small>per bulan</small></div>
+      <article class="plan plan-blue">
+        <div class="plan-head"><h3>Pro</h3><p class="price"><b>Rp49.000</b>per bulan</p></div>
         <ul>
           <li><svg class="i" aria-hidden="true"><use href="/icons.svg#check"/></svg>Semua fitur Basic</li>
           <li><svg class="i" aria-hidden="true"><use href="/icons.svg#check"/></svg>Before-After jumlah ulasan sejak aktivasi</li>
@@ -94,12 +78,63 @@
           <li><svg class="i" aria-hidden="true"><use href="/icons.svg#check"/></svg>Minipage: ulasan, WhatsApp, menu, Instagram</li>
           <li><svg class="i" aria-hidden="true"><use href="/icons.svg#check"/></svg>Kotak masukan privat dari pelanggan</li>
         </ul>
-        <a class="btn" data-wa-link="Halo, saya mau tanya paket Pro kartu ulasan." href="/kelola">Tanya paket Pro</a>
+        <a class="plan-btn" data-wa-link="Halo, saya mau tanya paket Pro kartu ulasan." href="/kelola">Tanya paket Pro</a>
       </article>
+    </section>
+  </div>
+
+  <section class="proof" aria-labelledby="proof-title">
+    <h2 id="proof-title">Hasil kartu terlihat dari ponsel</h2>
+    <div class="ring-box">
+      <svg class="ring" viewBox="0 0 240 240" role="img" aria-label="Contoh: 66 persen tap lewat NFC dan 34 persen lewat QR">
+        <circle class="ring-track" cx="120" cy="120" r="98"/>
+        <circle class="ring-nfc" cx="120" cy="120" r="98" pathLength="100" stroke-dasharray="62 38" stroke-dashoffset="-2"/>
+        <circle class="ring-qr" cx="120" cy="120" r="98" pathLength="100" stroke-dasharray="30 70" stroke-dashoffset="-68"/>
+      </svg>
+      <div class="ring-center">
+        <b>4,9</b>
+        <svg class="stars" viewBox="0 0 120 22" aria-hidden="true"><use href="/icons.svg#stars5"/></svg>
+        <span>128 ulasan</span>
+      </div>
     </div>
+    <ul class="chips">
+      <li><i class="key key-nfc"></i>NFC 212 tap</li>
+      <li><i class="key key-qr"></i>QR 108 tap</li>
+    </ul>
+    <div class="bars" role="img" aria-label="Contoh tap per hari selama seminggu">
+      <span><i></i>Sen</span><span><i></i>Sel</span><span><i></i>Rab</span><span><i></i>Kam</span><span><i></i>Jum</span><span><i></i>Sab</span><span><i></i>Min</span>
+    </div>
+    <p class="caption">Contoh tampilan dasbor, bukan data pelanggan sungguhan.</p>
   </section>
 
-  <footer class="home-foot">
+  <section class="product" aria-labelledby="product-title">
+    <h2 id="product-title">Kartu akrilik 10 x 10 cm</h2>
+    <figure class="standee">
+      <div class="standee-head">
+        <svg viewBox="0 0 48 48" aria-hidden="true"><use href="/icons.svg#google-g"/></svg>
+        <div>
+          <p>Bantu kami dengan ulasan Google</p>
+          <svg class="stars" viewBox="0 0 120 22" aria-hidden="true"><use href="/icons.svg#stars5"/></svg>
+        </div>
+      </div>
+      <div class="standee-body">
+        <div><span class="standee-ring"><svg class="i" aria-hidden="true"><use href="/icons.svg#tap"/></svg></span><b>Tempel HP</b></div>
+        <small>atau</small>
+        <div><img src="/contoh-qr.svg" width="88" height="88" alt=""><b>Scan QR</b></div>
+      </div>
+    </figure>
+  </section>
+
+  <section class="activate" id="aktifkan" aria-labelledby="activate-title">
+    <h2 id="activate-title">Sudah punya kartu?</h2>
+    <p>Masukkan kode di kartu untuk mulai mengaktifkan.</p>
+    <form id="code-form">
+      <input name="code" aria-label="Kode kartu" placeholder="Kode di kartu" maxlength="10" autocomplete="off" required>
+      <button class="go" type="submit"><span><svg class="i" aria-hidden="true"><use href="/icons.svg#back"/></svg></span>Aktifkan kartu</button>
+    </form>
+  </section>
+
+  <footer class="foot">
     <span>{{BRAND}} tidak berafiliasi dengan Google.</span>
     <a href="/kelola">Kelola kartu</a>
     <a href="/reseller">Masuk reseller</a>
