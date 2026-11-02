@@ -16,6 +16,7 @@ const tablist = document.querySelector('.tabs');
 const tabs = [...tablist.querySelectorAll('[role=tab]')];
 const sheet = document.querySelector('.sheet');
 const calm = matchMedia('(prefers-reduced-motion: reduce)');
+let releaseTimer;
 
 function showTab(name) {
   if (tablist.dataset.active === name) return;
@@ -29,20 +30,24 @@ function showTab(name) {
     panel.hidden = !active;
     panel.classList.toggle('enter', active);
   });
-  sheet.classList.remove('moving');
-  sheet.style.height = '';
-  if (calm.matches) return;
+  releaseSheet();
   const to = sheet.offsetHeight;
+  if (calm.matches || from === to) return;
   sheet.style.height = `${from}px`;
   sheet.classList.add('moving');
   void sheet.offsetHeight;
   sheet.style.height = `${to}px`;
+  releaseTimer = setTimeout(releaseSheet, 600);
+}
+
+function releaseSheet() {
+  clearTimeout(releaseTimer);
+  sheet.classList.remove('moving');
+  sheet.style.height = '';
 }
 
 sheet.addEventListener('transitionend', (event) => {
-  if (event.target !== sheet || event.propertyName !== 'height') return;
-  sheet.classList.remove('moving');
-  sheet.style.height = '';
+  if (event.target === sheet && event.propertyName === 'height') releaseSheet();
 });
 
 tabs.forEach((tab, i) => {
@@ -60,12 +65,15 @@ document.querySelectorAll('[data-show]').forEach((link) => {
 });
 
 const insights = document.getElementById('insights');
-const turnInsight = (step) => {
-  const width = insights.clientWidth + 16;
-  const last = insights.children.length - 1;
-  const index = Math.round(insights.scrollLeft / width) + step;
-  insights.scrollTo({ left: (index < 0 ? last : index > last ? 0 : index) * width, behavior: calm.matches ? 'auto' : 'smooth' });
-};
+const slides = [...insights.children];
+let slide = 0;
+
+function turnInsight(step) {
+  slide = (slide + step + slides.length) % slides.length;
+  insights.style.setProperty('--i', slide);
+  slides.forEach((item, i) => { item.inert = i !== slide; });
+}
+slides.forEach((item, i) => { item.inert = i !== 0; });
 document.getElementById('insight-prev').addEventListener('click', () => turnInsight(-1));
 document.getElementById('insight-next').addEventListener('click', () => turnInsight(1));
 

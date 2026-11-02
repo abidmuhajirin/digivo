@@ -8,7 +8,7 @@
 
 Halaman depan punya sistem sendiri di `public/css/home.css` dan tidak memuat `app.css`, jadi perubahannya tidak menyentuh dasbor. Isi bagian di bawah ini hanya berlaku untuk aplikasi.
 
-Polanya: blok biru penuh di atas, empat tombol lingkaran kuning, lembar putih dengan tab melengkung, kartu putih berisi contoh dasbor. Warna: biru `#0a6cf5`, ungu `#cb80f5`, kuning `#ffd93b`, koral `#f27b76`, latar `#eef2fa`. Ungu dan koral hanya untuk ikon langkah. Jarak sisi konten 20px, teks di luar kartu 28px. Semua angka contoh wajib berlabel contoh, dan jangan memakai testimoni, nama, atau foto pelanggan karangan.
+Polanya: blok biru penuh di atas dengan mockup akrilik 3D, empat tombol lingkaran kuning, lembar putih dengan tab melengkung, kartu putih berisi contoh dasbor. Halaman hanya bergerak vertikal: tidak ada gestur geser samping, slider memakai tombol. Warna: biru `#0a6cf5`, ungu `#cb80f5`, kuning `#ffd93b`, koral `#f27b76`, latar `#eef2fa`. Ungu dan koral hanya untuk ikon langkah. Jarak sisi konten 20px, teks di luar kartu 28px. Semua angka contoh wajib berlabel contoh, dan jangan memakai testimoni, nama, atau foto pelanggan karangan.
 
 ## Warna
 
