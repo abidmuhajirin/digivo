@@ -1,0 +1,32 @@
+name = "digivo-maps"
+main = "src/index.js"
+compatibility_date = "2026-10-01"
+compatibility_flags = ["nodejs_compat"]
+
+# Baris ini harus tetap DI ATAS [vars], kalau di bawahnya akan dianggap variabel biasa.
+routes = [{ pattern = "maps.digivo.biz.id", custom_domain = true }]
+
+[assets]
+directory = "public"
+binding = "ASSETS"
+run_worker_first = true
+html_handling = "none"
+not_found_handling = "none"
+
+[vars]
+BRAND = "TapUlas"
+# Tertanam permanen di NFC dan QR setiap kartu.
+BASE_URL = "https://maps.digivo.biz.id"
+# Nomor WhatsApp penjual, format internasional tanpa +.
+ADMIN_WA = ""
+# Naikkan ke 100000 jika memakai Workers Paid. PIN lama tetap berlaku.
+PBKDF2_ITER = "10000"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "digivo-maps-db"
+database_id = "69f76708-34a4-4ea7-a703-05a2d2257161"
+
+# Rahasia TIDAK ditulis di file ini. Atur lewat terminal:
+#   npx wrangler secret put ADMIN_PASSWORD
+#   npx wrangler secret put GOOGLE_PLACES_API_KEY   (opsional)

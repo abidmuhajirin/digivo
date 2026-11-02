@@ -1,0 +1,22 @@
+{
+  "name": "digivo-maps",
+  "version": "0.2.0",
+  "private": true,
+  "type": "module",
+  "description": "Kartu ulasan Google NFC + QR di Cloudflare Workers dan D1.",
+  "scripts": {
+    "dev": "wrangler dev --port 3000",
+    "deploy": "wrangler deploy",
+    "db:init": "wrangler d1 execute digivo-maps-db --remote --file=schema.sql",
+    "db:init:local": "wrangler d1 execute digivo-maps-db --local --file=schema.sql",
+    "seed:local": "node scripts/seed-local.js && wrangler d1 execute digivo-maps-db --local --file=.wrangler/seed.sql",
+    "backup": "wrangler d1 export digivo-maps-db --remote --output=backup.sql",
+    "test": "node --test test/"
+  },
+  "dependencies": {
+    "hono": "^4.0.0"
+  },
+  "devDependencies": {
+    "wrangler": "^4.0.0"
+  }
+}

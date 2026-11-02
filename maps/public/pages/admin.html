@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#101011">
+<meta name="robots" content="noindex">
+<title>Admin - {{BRAND}}</title>
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/css/app.css">
+</head>
+<body>
+<main class="admin" id="admin">
+  <form id="admin-login" class="panel stack-sm">
+    <h2>Admin {{BRAND}}</h2>
+    <label class="field"><span>Kata sandi</span><input name="password" type="password" required autocomplete="current-password"></label>
+    <p class="form-msg" role="alert"></p>
+    <button class="cta" type="submit">Masuk</button>
+  </form>
+</main>
+<script type="module" src="/js/admin.js"></script>
+</body>
+</html>

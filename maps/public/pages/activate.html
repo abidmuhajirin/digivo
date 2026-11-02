@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#101011">
+<meta name="robots" content="noindex">
+<title>Aktivasi kartu - {{BRAND}}</title>
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/css/app.css">
+</head>
+<body>
+<main class="wrap stack">
+  <div class="topbar">
+    <a class="circle-btn" href="/" aria-label="Kembali ke halaman utama"><svg class="i" aria-hidden="true"><use href="/icons.svg#back"/></svg></a>
+    <h1>Aktivasi kartu</h1><span></span>
+  </div>
+
+  <form id="activate" class="stack" autocomplete="off">
+    <section class="panel stack-sm">
+      <h2>Kode dari lembar aktivasi</h2>
+      <label class="field"><span>Kode kartu</span>
+        <input class="code" name="code" maxlength="10" required placeholder="7 karakter"></label>
+      <label class="field"><span>Kode aktivasi</span>
+        <input class="code" name="activationCode" maxlength="12" required placeholder="XXXX-XXXX"></label>
+    </section>
+
+    <section class="panel stack-sm">
+      <h2>Bisnis Anda</h2>
+      <label class="field" id="name-field"><span>Nama bisnis</span>
+        <input name="name" maxlength="80" required placeholder="Nama sesuai di Google Maps">
+        <small id="name-hint" hidden>Ketik minimal 3 huruf, lalu pilih bisnis Anda.</small>
+      </label>
+      <ul class="suggest" id="suggest" hidden></ul>
+      <div class="note" id="picked" hidden></div>
+
+      <div id="link-box" class="stack-sm">
+        <label class="field"><span>Link Google bisnis</span>
+          <input name="link" inputmode="url" placeholder="Tempel link dari Google Maps atau Profil Bisnis">
+        </label>
+        <p class="note" id="link-note" hidden></p>
+        <details class="drawer">
+          <summary>Cara mengambil link</summary>
+          <p class="muted"><strong>Paling mudah:</strong> buka bisnis di Google Maps, ketuk Bagikan, salin link, lalu tempel di sini. Link otomatis diubah menjadi link form ulasan.</p>
+          <p class="muted"><strong>Kalau muncul peringatan:</strong> di Profil Bisnis Google, pilih "Minta ulasan", lalu salin link-nya.</p>
+        </details>
+      </div>
+
+      <details class="drawer">
+        <summary>Jumlah ulasan saat ini (opsional)</summary>
+        <div class="stack-sm">
+          <p class="muted">Menjadi angka "Sebelum" untuk melihat pertambahan ulasan setelah kartu dipakai.</p>
+          <div class="split-fields">
+            <label class="field"><span>Jumlah ulasan</span><input name="reviewCount" inputmode="numeric" maxlength="7" placeholder="Misal: 12"></label>
+            <label class="field"><span>Rating</span><input name="rating" inputmode="decimal" maxlength="3" placeholder="Misal: 4,5"></label>
+          </div>
+        </div>
+      </details>
+    </section>
+
+    <section class="panel stack-sm">
+      <h2>Buat PIN pengelola</h2>
+      <label class="field"><span>PIN 6 angka</span>
+        <input class="pin" name="pin" inputmode="numeric" pattern="\d{6}" maxlength="6" required placeholder="000000" autocomplete="new-password">
+        <small>Dipakai untuk masuk ke halaman kelola. Lupa PIN? Lembar aktivasi bisa memulihkannya.</small>
+      </label>
+    </section>
+
+    <p class="form-msg" role="alert"></p>
+    <button class="cta" type="submit">Aktifkan kartu</button>
+  </form>
+
+  <section id="done" class="stack" hidden></section>
+</main>
+<script type="module" src="/js/activate.js"></script>
+</body>
+</html>

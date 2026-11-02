@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#101011">
+<meta name="robots" content="noindex">
+<title>Kelola kartu - {{BRAND}}</title>
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/css/app.css">
+</head>
+<body>
+<main class="wrap stack">
+  <div class="topbar">
+    <a class="circle-btn" href="/" aria-label="Kembali ke halaman utama"><svg class="i" aria-hidden="true"><use href="/icons.svg#back"/></svg></a>
+    <h1>Kelola kartu</h1><span></span>
+  </div>
+
+  <form id="login" class="panel stack-sm">
+    <h2>Masuk</h2>
+    <label class="field"><span>Kode kartu</span>
+      <input class="code" name="code" maxlength="10" required placeholder="7 karakter" autocomplete="username"></label>
+    <label class="field"><span>PIN</span>
+      <input class="pin" name="pin" type="password" inputmode="numeric" maxlength="6" required autocomplete="current-password"></label>
+    <p class="form-msg" role="alert"></p>
+    <button class="cta" type="submit">Masuk</button>
+  </form>
+
+  <details class="panel drawer">
+    <summary>Lupa PIN</summary>
+    <form id="forgot" class="stack-sm">
+      <p class="muted">Pakai kode aktivasi dari lembar yang disertakan bersama kartu.</p>
+      <label class="field"><span>Kode kartu</span>
+        <input class="code" name="code" maxlength="10" required autocomplete="off"></label>
+      <label class="field"><span>Kode aktivasi</span>
+        <input class="code" name="activationCode" maxlength="12" required placeholder="XXXX-XXXX" autocomplete="off"></label>
+      <label class="field"><span>PIN baru (6 angka)</span>
+        <input class="pin" name="pin" inputmode="numeric" pattern="\d{6}" maxlength="6" required autocomplete="new-password"></label>
+      <p class="form-msg" role="alert"></p>
+      <button class="btn btn-light" type="submit">Simpan PIN baru</button>
+    </form>
+  </details>
+</main>
+<script type="module" src="/js/login.js"></script>
+</body>
+</html>
