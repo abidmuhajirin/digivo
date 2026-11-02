@@ -28,6 +28,7 @@
 
 <main>
   <div class="tabs" role="tablist" aria-label="Info kartu" data-active="cara">
+    <span class="tab-ink" aria-hidden="true"></span>
     <button class="tab" id="tab-cara" role="tab" aria-controls="panel-cara" aria-selected="true">Cara kerja</button>
     <button class="tab" id="tab-paket" role="tab" aria-controls="panel-paket" aria-selected="false" tabindex="-1">Paket</button>
   </div>
@@ -85,26 +86,44 @@
 
   <section class="proof" aria-labelledby="proof-title">
     <h2 id="proof-title">Hasil kartu terlihat dari ponsel</h2>
-    <div class="ring-box">
-      <svg class="ring" viewBox="0 0 240 240" role="img" aria-label="Contoh: 66 persen tap lewat NFC dan 34 persen lewat QR">
-        <circle class="ring-track" cx="120" cy="120" r="98"/>
-        <circle class="ring-nfc" cx="120" cy="120" r="98" pathLength="100" stroke-dasharray="62 38" stroke-dashoffset="-2"/>
-        <circle class="ring-qr" cx="120" cy="120" r="98" pathLength="100" stroke-dasharray="30 70" stroke-dashoffset="-68"/>
-      </svg>
-      <div class="ring-center">
-        <b>4,9</b>
-        <svg class="stars" viewBox="0 0 120 22" aria-hidden="true"><use href="/icons.svg#stars5"/></svg>
-        <span>128 ulasan</span>
+    <p class="caption">Contoh tampilan dasbor, bukan data pelanggan sungguhan.</p>
+
+    <div class="score">
+      <b>4,9</b>
+      <div>
+        <svg class="stars" viewBox="0 0 120 22" role="img" aria-label="Rating 4,9 dari 5"><use href="/icons.svg#stars5"/></svg>
+        <span>Dari 128 ulasan Google</span>
       </div>
     </div>
-    <ul class="chips">
-      <li><i class="key key-nfc"></i>NFC 212 tap</li>
-      <li><i class="key key-qr"></i>QR 108 tap</li>
-    </ul>
-    <div class="bars" role="img" aria-label="Contoh tap per hari selama seminggu">
-      <span><i></i>Sen</span><span><i></i>Sel</span><span><i></i>Rab</span><span><i></i>Kam</span><span><i></i>Jum</span><span><i></i>Sab</span><span><i></i>Min</span>
+
+    <dl class="tiles">
+      <div class="tile tile-pale"><dd>320</dd><dt>Tap bulan ini</dt></div>
+      <div class="tile tile-yellow"><dd>+24</dd><dt>Ulasan sejak kartu dipasang</dt></div>
+    </dl>
+
+    <div class="meters">
+      <h3>Pelanggan datang lewat</h3>
+      <div class="meter"><span>NFC</span><i class="meter-nfc"></i><b>66%</b></div>
+      <div class="meter"><span>QR</span><i class="meter-qr"></i><b>34%</b></div>
     </div>
-    <p class="caption">Contoh tampilan dasbor, bukan data pelanggan sungguhan.</p>
+
+    <div class="insights-box">
+      <div class="insights-head">
+        <h3>Yang bisa dipantau</h3>
+        <div class="insights-nav">
+          <button type="button" id="insight-prev" aria-label="Sebelumnya"><svg class="i" aria-hidden="true"><use href="/icons.svg#back"/></svg></button>
+          <button type="button" id="insight-next" aria-label="Berikutnya"><svg class="i" aria-hidden="true"><use href="/icons.svg#back"/></svg></button>
+        </div>
+      </div>
+      <div class="insights" id="insights" tabindex="0" role="group" aria-label="Contoh isi dasbor">
+        <article><h4>Before-After</h4><p>Ulasan naik dari 104 ke 128 sejak kartu dipasang.</p></article>
+        <article><h4>Jam ramai</h4><p>Paling ramai sekitar pukul 19.00 WIB. Taruh kartu di tempat yang terlihat pada jam ini.</p></article>
+        <article><h4>Per kartu</h4><p>Kartu Meja 3 paling aktif dengan 96 tap bulan ini.</p></article>
+        <article><h4>Pesan privat</h4><p>Masukan pelanggan langsung dibaca pemilik dan tidak tampil di Google.</p></article>
+      </div>
+    </div>
+
+    <a class="go" href="#tab-paket" data-show="paket"><span><svg class="i" aria-hidden="true"><use href="/icons.svg#back"/></svg></span>Lihat paket</a>
   </section>
 
   <section class="product" aria-labelledby="product-title">

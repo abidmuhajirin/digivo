@@ -14,16 +14,36 @@ document.querySelectorAll('[data-wa-link]').forEach((link) => {
 
 const tablist = document.querySelector('.tabs');
 const tabs = [...tablist.querySelectorAll('[role=tab]')];
+const sheet = document.querySelector('.sheet');
+const calm = matchMedia('(prefers-reduced-motion: reduce)');
 
 function showTab(name) {
+  if (tablist.dataset.active === name) return;
+  const from = sheet.offsetHeight;
   tablist.dataset.active = name;
   tabs.forEach((tab) => {
     const active = tab.id === `tab-${name}`;
+    const panel = document.getElementById(tab.getAttribute('aria-controls'));
     tab.setAttribute('aria-selected', active);
     tab.tabIndex = active ? 0 : -1;
-    document.getElementById(tab.getAttribute('aria-controls')).hidden = !active;
+    panel.hidden = !active;
+    panel.classList.toggle('enter', active);
   });
+  sheet.classList.remove('moving');
+  sheet.style.height = '';
+  if (calm.matches) return;
+  const to = sheet.offsetHeight;
+  sheet.style.height = `${from}px`;
+  sheet.classList.add('moving');
+  void sheet.offsetHeight;
+  sheet.style.height = `${to}px`;
 }
+
+sheet.addEventListener('transitionend', (event) => {
+  if (event.target !== sheet || event.propertyName !== 'height') return;
+  sheet.classList.remove('moving');
+  sheet.style.height = '';
+});
 
 tabs.forEach((tab, i) => {
   tab.addEventListener('click', () => showTab(tab.id.slice(4)));
@@ -38,6 +58,16 @@ tabs.forEach((tab, i) => {
 document.querySelectorAll('[data-show]').forEach((link) => {
   link.addEventListener('click', () => showTab(link.dataset.show));
 });
+
+const insights = document.getElementById('insights');
+const turnInsight = (step) => {
+  const width = insights.clientWidth + 16;
+  const last = insights.children.length - 1;
+  const index = Math.round(insights.scrollLeft / width) + step;
+  insights.scrollTo({ left: (index < 0 ? last : index > last ? 0 : index) * width, behavior: calm.matches ? 'auto' : 'smooth' });
+};
+document.getElementById('insight-prev').addEventListener('click', () => turnInsight(-1));
+document.getElementById('insight-next').addEventListener('click', () => turnInsight(1));
 
 const proof = document.querySelector('.proof');
 new IntersectionObserver((entries, observer) => {
