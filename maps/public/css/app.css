@@ -72,7 +72,7 @@
 
 /* Pop-up konfirmasi di tengah layar */
 html:has(.cdlg[open]) { overflow: hidden; }
-.cdlg { width: min(100% - 32px, 400px); padding: 0; border: 0; border-radius: var(--r-lg); background: var(--surface); color: var(--ink); box-shadow: 0 30px 60px -20px #0b1a3d80; }
+.cdlg { width: min(100% - 32px, 400px); padding: 0; border: 0; border-radius: var(--r-lg); background: var(--surface); color: var(--ink); box-shadow: 0 30px 60px -20px #00000059; }
 .cdlg[open] { animation: cdlg-in .24s var(--ease); }
 .cdlg::backdrop { background: #0b1a3dad; }
 @keyframes cdlg-in { from { opacity: 0; transform: translateY(10px) scale(.97); } }
