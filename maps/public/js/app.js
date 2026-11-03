@@ -9,6 +9,8 @@ const DAY_NAMES = ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'];
 
 let me;
 let stats;
+let loadedAt = 0;
+let inboxCache = null;
 
 const isPro = () => me.business.plan === 'pro';
 const trialDaysLeft = () => Math.max(1, Math.ceil((me.business.proUntil - Date.now()) / 86_400_000));
@@ -183,8 +185,16 @@ async function renderMasukan() {
     box.innerHTML = `<section class="panel">${upgradeBlock('Terima keluhan sebelum jadi masalah', 'Pelanggan bisa mengirim pesan privat lewat Minipage, sambil tetap bebas menulis ulasan di Google.')}</section>`;
     return;
   }
-  box.innerHTML = '<p class="muted">Memuat pesan...</p>';
-  const { items } = await api('/api/inbox');
+  // Pesan yang sudah dimuat tampil langsung, lalu diperbarui di belakang.
+  const cached = inboxCache;
+  if (!cached) box.innerHTML = '<p class="muted">Memuat pesan...</p>';
+  else api('/api/inbox').then(({ items: fresh }) => {
+    const changed = JSON.stringify(fresh) !== JSON.stringify(inboxCache);
+    inboxCache = fresh;
+    if (changed && currentTab() === 'masukan') renderMasukan();
+  }).catch(() => {});
+  const { items } = cached ? { items: cached } : await api('/api/inbox');
+  inboxCache = items;
   if (!items.length) {
     box.innerHTML = `<section class="panel"><h2>Belum ada pesan</h2><p class="muted">${me.business.mode === 'page'
       ? 'Pesan pelanggan akan muncul di sini.'
@@ -202,6 +212,7 @@ async function renderMasukan() {
     const id = event.target.dataset.read;
     if (!id) return;
     await api(`/api/inbox/${id}/read`, { method: 'POST' });
+    inboxCache = null;
     renderMasukan();
   };
 }
@@ -274,7 +285,7 @@ function renderAtur() {
     ? `<a class="btn btn-small" href="${esc(waUrl(me.sellerWa, `Halo, saya mau mengganti tujuan kartu ulasan ${business.name}.`))}" target="_blank" rel="noopener">Hubungi penjual</a>`
     : '';
   view.innerHTML = `
-    <div class="topbar"><h1>Pengaturan</h1></div>
+    <div class="topbar"><h1>Pengaturan</h1><button class="btn btn-small" id="logout">Keluar</button></div>
     <main class="wrap app-main stack">
 
       <form id="info" class="panel stack-sm">
@@ -328,8 +339,6 @@ function renderAtur() {
           </div>
         </details>
       </form>
-
-      <button class="btn" id="logout">Keluar</button>
     </main>`;
 
   const saved = (message, text = 'Tersimpan.') => { message.textContent = text; message.classList.add('ok'); };
@@ -402,10 +411,25 @@ dock.addEventListener('click', (event) => {
   const button = event.target.closest('button');
   if (button) location.hash = button.dataset.tab;
 });
-addEventListener('hashchange', () => { scrollTo({ top: 0 }); render(); });
+// Isian yang sedang diketik tidak boleh hilang karena data diperbarui di belakang.
+const editing = () => view.contains(document.activeElement) && document.activeElement.matches('input, textarea, select')
+  || [...view.querySelectorAll('input, textarea')].some((field) => field.type !== 'checkbox' && field.value !== field.defaultValue);
+
+// Pindah menu memakai data yang sudah ada. Angka diperbarui di belakang bila sudah lebih dari 30 detik.
+addEventListener('hashchange', () => {
+  scrollTo({ top: 0 });
+  render();
+  if (Date.now() - loadedAt < 30_000) return;
+  const tab = currentTab();
+  load().then(() => {
+    loadedAt = Date.now();
+    if (currentTab() === tab && tab !== 'masukan' && !editing()) render();
+  }).catch(() => {});
+});
 
 try {
   await load();
+  loadedAt = Date.now();
   render();
 } catch (error) {
   fail(error);

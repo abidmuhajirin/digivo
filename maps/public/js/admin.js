@@ -1,4 +1,4 @@
-import { api, bindForm, esc, formatDate, icon, toast } from '/js/common.js';
+import { api, bindForm, codeChip, confirmBox, copyCode, esc, formatDate, icon, seal, toast } from '/js/common.js';
 import { activationTicket, attachPlaceSearch, buyerFormFields, destinationNote, pinTicket, showResult } from '/js/sales.js';
 
 const root = document.getElementById('admin');
@@ -14,17 +14,18 @@ let result = '';
 const currentTab = () => (TABS.includes(location.hash.slice(1)) ? location.hash.slice(1) : 'jual');
 const displayWa = (number) => number.replace(/^62/, '0');
 
-const proLabel = (b) => {
-  if (b.plan !== 'pro') return 'Basic';
-  if (b.proUntil && b.proUntil < Date.now()) return `Pro habis ${formatDate(b.proUntil)}`;
-  if (b.isTrial) return `Trial s.d. ${formatDate(b.proUntil)}`;
-  return b.proUntil ? `Pro s.d. ${formatDate(b.proUntil)}` : 'Pro';
+const TIER_NAME = { pro: 'Pro', basic: 'Basic', trial: 'Trial' };
+const tierOf = (b) => {
+  if (b.plan !== 'pro' || (b.proUntil && b.proUntil < Date.now())) return 'basic';
+  return b.isTrial ? 'trial' : 'pro';
 };
-
-const isActivePro = (b) => b.plan === 'pro' && (!b.proUntil || b.proUntil > Date.now());
-const tier = (b) => (isActivePro(b)
-  ? `<span class="tier tier-pro">${icon('verified')}Pro</span>`
-  : `<span class="tier tier-basic">${icon('verified')}Basic</span>`);
+const planDetail = (b) => {
+  if (b.plan !== 'pro') return 'Paket Basic';
+  if (b.proUntil && b.proUntil < Date.now()) return `Pro berakhir ${formatDate(b.proUntil)}`;
+  if (b.isTrial) return `Trial Pro sampai ${formatDate(b.proUntil)}`;
+  return b.proUntil ? `Pro sampai ${formatDate(b.proUntil)}` : 'Pro tanpa batas waktu';
+};
+const sealTile = (tier) => `<span class="seal-tile seal-${tier}">${seal(tier)}<span>${TIER_NAME[tier]}</span></span>`;
 const resellerName = (id) => overview.resellers.find((r) => r.id === id)?.name ?? 'reseller';
 
 // Sisa kartu kosong per pemegang, supaya terlihat berapa yang bisa ditarik dari tiap reseller.
@@ -40,32 +41,41 @@ function businessRows(filter = '') {
   const rows = overview.businessList.filter((b) =>
     `${b.name} ${b.codes ?? ''} ${b.seller ?? ''}`.toLowerCase().includes(query));
   if (!rows.length) {
-    return `<p class="muted">${overview.businessList.length ? 'Tidak ada yang cocok.' : 'Belum ada bisnis. Kartu yang aktif muncul di sini.'}</p>`;
+    return `<p class="muted list-empty">${overview.businessList.length ? 'Tidak ada yang cocok.' : 'Belum ada bisnis. Kartu yang aktif muncul di sini.'}</p>`;
   }
-  return rows.map((b) => `
-    <article class="admin-row">
-      <div>
-        ${esc(b.name)}${tier(b)}${b.isDemo ? ' <span class="muted">(demo)</span>' : ''}
-        <small>${esc(proLabel(b))} · ${b.cards} kartu · ${b.taps30} tap 30 hari${b.linkLocked ? ' · link terkunci' : ''}</small>
-        <small>${b.seller ? `Reseller: ${esc(b.seller)}` : 'Penjualan pusat'}</small>
-        <small class="mono">${esc(b.codes ?? '')}</small>
+  return rows.map((b) => {
+    const codes = (b.codes ?? '').split(' ').filter(Boolean);
+    return `
+    <article class="lcard">
+      <div class="lcard-head">
+        <div class="lcard-title"><h3>${esc(b.name)}</h3>${b.isDemo ? '<small>Akun demo</small>' : ''}</div>
+        ${sealTile(tierOf(b))}
       </div>
-      <details class="drawer">
-        <summary>Ganti nama atau link</summary>
-        <form class="stack-sm" data-edit="${b.id}">
-          <label class="field"><span>Nama bisnis</span><input name="name" maxlength="80" required value="${esc(b.name)}"></label>
-          <label class="field"><span>Link Google Maps</span><input name="link" inputmode="url" required value="${esc(b.reviewUrl)}"></label>
-          <p class="form-msg" role="alert"></p>
-          <button class="btn btn-small btn-light" type="submit">Simpan</button>
-        </form>
+      <div class="lcard-body">
+        <p>${esc(planDetail(b))}</p>
+        <p>${b.cards} kartu · ${b.taps30} tap 30 hari${b.linkLocked ? ' · link terkunci' : ''}</p>
+        <p>${b.seller ? `Reseller: ${esc(b.seller)}` : 'Penjualan pusat'}</p>
+        ${codes.length ? `<div class="code-chips">${codes.map((code) => codeChip(code)).join('')}</div>` : ''}
+      </div>
+      <details class="lcard-more">
+        <summary>Kelola bisnis${icon('back')}</summary>
+        <div class="lcard-drawer stack-sm">
+          <form class="stack-sm" data-edit="${b.id}">
+            <label class="field"><span>Nama bisnis</span><input name="name" maxlength="80" required value="${esc(b.name)}"></label>
+            <label class="field"><span>Link Google Maps</span><input name="link" inputmode="url" required value="${esc(b.reviewUrl)}"></label>
+            <p class="form-msg" role="alert"></p>
+            <button class="btn btn-small btn-light" type="submit">Simpan nama dan link</button>
+          </form>
+          <div class="admin-actions">
+            <button class="btn btn-small" data-plan="pro" data-months="1" data-id="${b.id}">Pro +1 bulan</button>
+            <button class="btn btn-small" data-plan="pro" data-months="12" data-id="${b.id}">Pro +12 bulan</button>
+            ${b.plan === 'pro' ? `<button class="btn btn-small btn-danger" data-plan="basic" data-id="${b.id}">Ubah ke Basic</button>` : ''}
+            <button class="btn btn-small" data-new-pin="${b.id}" data-name="${esc(b.name)}">PIN baru</button>
+          </div>
+        </div>
       </details>
-      <div class="admin-actions">
-        <button class="btn btn-small" data-plan="pro" data-months="1" data-id="${b.id}">+1 bln</button>
-        <button class="btn btn-small" data-plan="pro" data-months="12" data-id="${b.id}">+12 bln</button>
-        ${b.plan === 'pro' ? `<button class="btn btn-small btn-danger" data-plan="basic" data-id="${b.id}">Ke Basic</button>` : ''}
-        <button class="btn btn-small" data-new-pin="${b.id}" data-name="${esc(b.name)}">PIN baru</button>
-      </div>
-    </article>`).join('');
+    </article>`;
+  }).join('');
 }
 
 function jualView() {
@@ -168,31 +178,37 @@ function kartuView() {
 }
 
 function resellerRows() {
-  if (!overview.resellers.length) return '<p class="muted">Belum ada reseller.</p>';
+  if (!overview.resellers.length) return '<p class="muted list-empty">Belum ada reseller.</p>';
   return overview.resellers.map((r) => `
-    <article class="admin-row">
-      <div class="admin-row-head">
-        <span>${esc(r.name)}<small>${esc(displayWa(r.whatsapp))}${r.city ? ` · ${esc(r.city)}` : ''}</small><small>Stok ${r.stock} · Terjual ${r.sold}</small></span>
-        ${r.active ? '' : '<span class="plan-chip off">Nonaktif</span>'}
+    <article class="lcard">
+      <div class="lcard-head">
+        <div class="lcard-title"><h3>${esc(r.name)}</h3>${r.active ? '<small>Aktif</small>' : '<small class="off">Nonaktif</small>'}</div>
+        <span class="seal-tile seal-stock"><b>${r.stock}</b><span>stok</span></span>
       </div>
-      <details class="drawer">
-        <summary>Ubah data</summary>
-        <form class="stack-sm" data-reseller="${r.id}">
-          <label class="field"><span>Nama</span><input name="name" maxlength="80" required value="${esc(r.name)}"></label>
-          <div class="split-fields">
-            <label class="field"><span>WhatsApp</span><input name="whatsapp" inputmode="tel" maxlength="20" required value="${esc(displayWa(r.whatsapp))}"></label>
-            <label class="field"><span>Kota</span><input name="city" maxlength="60" value="${esc(r.city)}"></label>
+      <div class="lcard-body">
+        <p>${esc(displayWa(r.whatsapp))}${r.city ? ` · ${esc(r.city)}` : ''}</p>
+        <p>Stok ${r.stock} · Terjual ${r.sold}</p>
+      </div>
+      <details class="lcard-more">
+        <summary>Kelola reseller${icon('back')}</summary>
+        <div class="lcard-drawer stack-sm">
+          <form class="stack-sm" data-reseller="${r.id}">
+            <label class="field"><span>Nama</span><input name="name" maxlength="80" required value="${esc(r.name)}"></label>
+            <div class="split-fields">
+              <label class="field"><span>WhatsApp</span><input name="whatsapp" inputmode="tel" maxlength="20" required value="${esc(displayWa(r.whatsapp))}"></label>
+              <label class="field"><span>Kota</span><input name="city" maxlength="60" value="${esc(r.city)}"></label>
+            </div>
+            <p class="form-msg" role="alert"></p>
+            <button class="btn btn-small btn-light" type="submit">Simpan data</button>
+          </form>
+          <div class="admin-actions">
+            <button class="btn btn-small" data-reseller-pin="${r.id}">PIN baru</button>
+            ${r.active
+              ? `<button class="btn btn-small btn-danger" data-active="0" data-id="${r.id}">Nonaktifkan</button>`
+              : `<button class="btn btn-small" data-active="1" data-id="${r.id}">Aktifkan</button>`}
           </div>
-          <p class="form-msg" role="alert"></p>
-          <button class="btn btn-small btn-light" type="submit">Simpan</button>
-        </form>
+        </div>
       </details>
-      <div class="admin-actions">
-        <button class="btn btn-small" data-reseller-pin="${r.id}">PIN baru</button>
-        ${r.active
-          ? `<button class="btn btn-small btn-danger" data-active="0" data-id="${r.id}">Nonaktifkan</button>`
-          : `<button class="btn btn-small" data-active="1" data-id="${r.id}">Aktifkan</button>`}
-      </div>
     </article>`).join('');
 }
 
@@ -229,7 +245,8 @@ function resellerView() {
       </form>
     </section>
 
-    <section class="panel"><h2>Daftar reseller</h2><div id="resellers">${resellerRows()}</div></section>`;
+    <h2 class="list-title">Daftar reseller</h2>
+    <div id="resellers" class="lcards">${resellerRows()}</div>`;
 }
 
 function bisnisView() {
@@ -238,8 +255,8 @@ function bisnisView() {
     <section class="panel">
       <h2>Bisnis</h2>
       <input class="search" id="search" type="search" aria-label="Cari bisnis, kode kartu, atau reseller" placeholder="Cari nama, kode, atau reseller" value="${esc(searchQuery)}">
-      <div id="rows">${businessRows(searchQuery)}</div>
-    </section>`;
+    </section>
+    <div id="rows" class="lcards">${businessRows(searchQuery)}</div>`;
 }
 
 const reload = async (message) => {
@@ -267,7 +284,8 @@ function bindKartu() {
     await reload('Batch dibuat');
   });
   bindForm(document.getElementById('clear-card'), async (values) => {
-    if (!confirm(`Kosongkan kartu ${values.code.toUpperCase()}? Riwayat tap kartu ini ikut terhapus.`)) return;
+    const ok = await confirmBox({ title: 'Kosongkan kartu?', text: `Kartu ${values.code.toUpperCase()} kembali kosong dan riwayat tap-nya ikut terhapus. Tindakan ini tidak bisa dibatalkan.`, ok: 'Kosongkan', danger: true });
+    if (!ok) return;
     await api('/api/admin/cards/reset', { method: 'POST', body: values });
     await reload('Kartu dikosongkan');
   });
@@ -301,16 +319,16 @@ function bindReseller() {
     }
   });
   list.addEventListener('click', async (event) => {
-    const { resellerPin, active, id } = event.target.dataset;
+    const { resellerPin, active, id } = event.target.closest('button')?.dataset ?? {};
     try {
-      if (resellerPin && confirm('Buat PIN baru? PIN lama langsung tidak berlaku.')) {
+      if (resellerPin && await confirmBox({ title: 'Buat PIN baru?', text: 'PIN lama reseller langsung tidak berlaku.', ok: 'Buat PIN baru' })) {
         const made = await api(`/api/admin/resellers/${resellerPin}/pin`, { method: 'POST' });
         result = pinTicket({ title: 'PIN reseller baru', name: made.name, pin: made.pin });
         await refresh();
         showResult();
       }
       if (active !== undefined) {
-        if (active === '0' && !confirm('Nonaktifkan reseller ini? Dia langsung keluar dan tidak bisa masuk.')) return;
+        if (active === '0' && !await confirmBox({ title: 'Nonaktifkan reseller?', text: 'Reseller langsung keluar dan tidak bisa masuk sampai diaktifkan lagi.', ok: 'Nonaktifkan', danger: true })) return;
         await api(`/api/admin/resellers/${id}/status`, { method: 'POST', body: { active: active === '1' } });
         await reload(active === '1' ? 'Reseller aktif' : 'Reseller nonaktif');
       }
@@ -342,13 +360,14 @@ function bindBisnis() {
     }
   });
   rows.addEventListener('click', async (event) => {
-    const { plan, months, id, newPin } = event.target.dataset;
+    const { plan, months, id, newPin } = event.target.closest('button')?.dataset ?? {};
     try {
       if (plan) {
+        if (plan === 'basic' && !await confirmBox({ title: 'Ubah ke Basic?', text: 'Fitur Pro bisnis ini langsung terkunci.', ok: 'Ubah ke Basic', danger: true })) return;
         await api(`/api/admin/businesses/${id}/plan`, { method: 'POST', body: { plan, months: Number(months) } });
         await reload('Paket diubah');
       }
-      if (newPin && confirm('Buat PIN baru? PIN lama pembeli langsung tidak berlaku.')) {
+      if (newPin && await confirmBox({ title: 'Buat PIN baru pembeli?', text: 'PIN lama pembeli langsung tidak berlaku.', ok: 'Buat PIN baru' })) {
         const made = await api(`/api/admin/businesses/${newPin}/pin`, { method: 'POST' });
         result = pinTicket({ title: 'PIN pembeli baru', name: made.name, pin: made.pin });
         await refresh();
@@ -370,15 +389,20 @@ function render() {
   });
   const views = { jual: jualView, kartu: kartuView, reseller: resellerView, bisnis: bisnisView };
   root.innerHTML = `
-    <div class="topbar page-top"><h1>${TITLES[tab]}</h1><button class="btn btn-small" id="logout">Keluar</button></div>
+    <div class="topbar page-top"><h1>${TITLES[tab]}</h1>${tab === 'bisnis' ? '<button class="btn btn-small" id="logout">Keluar</button>' : ''}</div>
     ${usageWarnings()}${views[tab]()}`;
   root.querySelectorAll('[data-w]').forEach((bar) => { bar.style.width = `${bar.dataset.w}%`; });
   ({ jual: bindJual, kartu: bindKartu, reseller: bindReseller, bisnis: bindBisnis })[tab]();
-  document.getElementById('logout').addEventListener('click', async () => {
+  document.getElementById('logout')?.addEventListener('click', async () => {
     await api('/api/admin/logout', { method: 'POST' });
     location.reload();
   });
 }
+
+root.addEventListener('click', (event) => {
+  const chip = event.target.closest('[data-copy]');
+  if (chip) copyCode(chip.dataset.copy);
+});
 
 async function refresh() {
   overview = await api('/api/admin/overview');

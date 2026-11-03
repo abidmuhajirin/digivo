@@ -60,3 +60,42 @@ document.addEventListener('input', (event) => {
   const value = raw.length > 4 ? `${raw.slice(0, 4)}-${raw.slice(4)}` : raw;
   if (value !== field.value) field.value = value;
 });
+
+// Segel terverifikasi KasirBosku: lingkaran dengan delapan lekuk lembut.
+const SEAL_D = `M${Array.from({ length: 120 }, (_, i) => {
+  const a = (i / 120) * 2 * Math.PI;
+  const r = 10.4 + 1.2 * Math.cos(8 * a);
+  return `${(12 + r * Math.sin(a)).toFixed(2)} ${(12 - r * Math.cos(a)).toFixed(2)}`;
+}).join('L')}Z`;
+const SEAL_TONE = { pro: ['#0a6cf5', '#ffffff'], basic: ['#ffd93b', '#1b2341'], trial: ['#e5342b', '#ffffff'] };
+export const seal = (tier) => `<svg class="seal" viewBox="0 0 24 24" aria-hidden="true"><path fill="${SEAL_TONE[tier][0]}" d="${SEAL_D}"/><path fill="none" stroke="${SEAL_TONE[tier][1]}" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" d="M7.6 12.3l3 3 5.8-6.2"/></svg>`;
+
+// Konfirmasi di tengah layar dengan gaya aplikasi, pengganti confirm() bawaan browser.
+export function confirmBox({ title, text, ok = 'Ya, lanjutkan', danger = false }) {
+  let dialog = document.querySelector('.cdlg');
+  if (!dialog) {
+    dialog = document.createElement('dialog');
+    dialog.className = 'cdlg';
+    dialog.innerHTML = '<form method="dialog"><h2></h2><p></p><div class="cdlg-actions"><button class="btn" value="cancel">Batal</button><button class="cta" value="ok"></button></div></form>';
+    dialog.addEventListener('click', (event) => { if (event.target === dialog) dialog.close('cancel'); });
+    document.body.append(dialog);
+  }
+  dialog.querySelector('h2').textContent = title;
+  dialog.querySelector('p').textContent = text;
+  const okButton = dialog.querySelector('[value=ok]');
+  okButton.textContent = ok;
+  okButton.classList.toggle('danger', danger);
+  dialog.returnValue = '';
+  dialog.showModal();
+  return new Promise((resolve) => {
+    dialog.addEventListener('close', () => resolve(dialog.returnValue === 'ok'), { once: true });
+  });
+}
+
+export function copyCode(code) {
+  navigator.clipboard.writeText(code)
+    .then(() => toast(`Kode ${code} disalin`))
+    .catch(() => toast('Gagal menyalin. Tahan kodenya untuk menyalin manual.'));
+}
+
+export const codeChip = (code, label = code) => `<button type="button" class="code-chip" data-copy="${esc(code)}" aria-label="Salin kode ${esc(code)}">${esc(label)}${icon('copy')}</button>`;

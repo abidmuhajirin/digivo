@@ -104,6 +104,9 @@ async function followShortLink(start, fetchImpl) {
   return current;
 }
 
+// Pesan galat Google menjelaskan penyebabnya (billing, API belum aktif, batasan kunci) tanpa memuat kuncinya.
+const googleError = async (res) => (await res.json().catch(() => null))?.error?.message?.slice(0, 300) ?? 'tanpa pesan';
+
 export async function searchPlaces(query, apiKey, fetchImpl = fetch) {
   const res = await fetchImpl('https://places.googleapis.com/v1/places:searchText', {
     method: 'POST',
@@ -115,7 +118,7 @@ export async function searchPlaces(query, apiKey, fetchImpl = fetch) {
     body: JSON.stringify({ textQuery: query, languageCode: 'id', regionCode: 'ID', pageSize: 5 }),
     signal: AbortSignal.timeout(5000),
   });
-  if (!res.ok) throw new Error(`Places API ${res.status}`);
+  if (!res.ok) throw new Error(`Places API ${res.status}: ${await googleError(res)}`);
   const data = await res.json();
   return (data.places ?? []).map((place) => ({
     placeId: place.id,
@@ -129,7 +132,7 @@ export async function fetchPlaceStats(placeId, apiKey, fetchImpl = fetch) {
     headers: { 'X-Goog-Api-Key': apiKey, 'X-Goog-FieldMask': 'rating,userRatingCount' },
     signal: AbortSignal.timeout(5000),
   });
-  if (!res.ok) throw new Error(`Places API ${res.status}`);
+  if (!res.ok) throw new Error(`Places API ${res.status}: ${await googleError(res)}`);
   const data = await res.json();
   return { count: data.userRatingCount ?? 0, rating: data.rating ?? null };
 }

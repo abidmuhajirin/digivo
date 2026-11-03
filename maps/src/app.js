@@ -428,7 +428,8 @@ export function createApp() {
     try {
       await countGoogleCall(c, 'search');
       return c.json({ places: await searchPlaces(query, c.env.GOOGLE_PLACES_API_KEY, c.env.fetchImpl) });
-    } catch {
+    } catch (error) {
+      console.error('Pencarian Google gagal:', error.message);
       return c.json({ error: 'Pencarian sedang gangguan. Tempel link Google Maps.' }, 502);
     }
   });

@@ -1,4 +1,4 @@
-import { api, bindForm, esc, formatDate, toast } from '/js/common.js';
+import { api, bindForm, codeChip, confirmBox, copyCode, esc, formatDate, groupCode, icon, toast } from '/js/common.js';
 import { activationTicket, attachPlaceSearch, buyerFormFields, destinationNote, pinTicket, showResult } from '/js/sales.js';
 
 const root = document.getElementById('reseller');
@@ -8,6 +8,7 @@ const TONES = { aktivasi: 'yellow', stok: 'green', riwayat: 'blue', akun: 'red' 
 const TITLES = { aktivasi: 'Aktivasi pembeli', stok: 'Stok kartu', riwayat: 'Riwayat penjualan', akun: 'Akun' };
 const VIA = { reseller: 'Diaktifkan Anda', self: 'Diaktifkan pembeli', admin: 'Diaktifkan admin' };
 let data;
+let loadedAt = 0;
 let result = '';
 let prefillCode = '';
 
@@ -34,7 +35,7 @@ function stokView() {
     ${data.stock.length ? `<div>${data.stock.map((card) => `
       <article class="admin-row">
         <div class="admin-row-head">
-          <span class="mono">${esc(card.code)}<small>Aktivasi ${esc(card.activationCode)}</small></span>
+          <span class="mono">${esc(card.code)}<small>Aktivasi ${esc(groupCode(card.activationCode))}</small></span>
           <button class="btn btn-small btn-light" data-use="${esc(card.code)}">Aktifkan</button>
         </div>
       </article>`).join('')}</div>` : '<p class="muted">Belum ada kartu di stok Anda.</p>'}
@@ -44,25 +45,30 @@ function stokView() {
 function soldRows(filter = '') {
   const query = filter.toLowerCase();
   const rows = data.sold.filter((row) => `${row.businessName} ${row.code}`.toLowerCase().includes(query));
-  if (!rows.length) return `<p class="muted">${data.sold.length ? 'Tidak ada yang cocok.' : 'Belum ada kartu terjual.'}</p>`;
+  if (!rows.length) return `<p class="muted list-empty">${data.sold.length ? 'Tidak ada yang cocok.' : 'Belum ada kartu terjual.'}</p>`;
   return rows.map((row) => `
-    <article class="admin-row">
-      <div>
-        ${esc(row.businessName)}
-        <small>${row.activatedAt ? formatDate(row.activatedAt) : '-'} · ${esc(VIA[row.via] ?? 'Aktif')}</small>
-        <small class="mono">${esc(row.code)} · Aktivasi ${esc(row.activationCode)}</small>
+    <article class="lcard">
+      <div class="lcard-head">
+        <div class="lcard-title"><h3>${esc(row.businessName)}</h3><small>${esc(VIA[row.via] ?? 'Aktif')}</small></div>
+        <span class="seal-tile seal-sold">${icon('store')}<span>Terjual</span></span>
+      </div>
+      <div class="lcard-body">
+        <p>${row.activatedAt ? `Terjual ${formatDate(row.activatedAt)}` : 'Tanggal tidak tercatat'}</p>
+        <div class="code-chips">${codeChip(row.code)}${codeChip(groupCode(row.activationCode), `Aktivasi ${groupCode(row.activationCode)}`)}</div>
       </div>
       ${row.via === 'reseller' ? `
-      <details class="drawer">
-        <summary>Ganti nama atau link</summary>
-        <form class="stack-sm" data-edit="${row.businessId}">
-          <label class="field"><span>Nama bisnis</span><input name="name" maxlength="80" required value="${esc(row.businessName)}"></label>
-          <label class="field"><span>Link Google Maps</span><input name="link" inputmode="url" required value="${esc(row.reviewUrl)}"></label>
-          <p class="form-msg" role="alert"></p>
-          <button class="btn btn-small btn-light" type="submit">Simpan</button>
-        </form>
-      </details>
-      <div class="admin-actions"><button class="btn btn-small" data-new-pin="${row.businessId}">PIN baru pembeli</button></div>` : ''}
+      <details class="lcard-more">
+        <summary>Kelola pembeli${icon('back')}</summary>
+        <div class="lcard-drawer stack-sm">
+          <form class="stack-sm" data-edit="${row.businessId}">
+            <label class="field"><span>Nama bisnis</span><input name="name" maxlength="80" required value="${esc(row.businessName)}"></label>
+            <label class="field"><span>Link Google Maps</span><input name="link" inputmode="url" required value="${esc(row.reviewUrl)}"></label>
+            <p class="form-msg" role="alert"></p>
+            <button class="btn btn-small btn-light" type="submit">Simpan nama dan link</button>
+          </form>
+          <div class="admin-actions"><button class="btn btn-small" data-new-pin="${row.businessId}">PIN baru pembeli</button></div>
+        </div>
+      </details>` : ''}
     </article>`).join('');
 }
 
@@ -72,8 +78,8 @@ function riwayatView() {
     <section class="panel">
       <h2>Kartu terjual</h2>
       <input class="search" id="search" type="search" aria-label="Cari bisnis atau kode kartu" placeholder="Cari nama atau kode">
-      <div id="rows">${soldRows()}</div>
-    </section>`;
+    </section>
+    <div id="rows" class="lcards">${soldRows()}</div>`;
 }
 
 function akunView() {
@@ -93,8 +99,7 @@ function akunView() {
           <button class="btn btn-light" type="submit">Simpan PIN</button>
         </div>
       </details>
-    </form>
-    <button class="btn" id="logout">Keluar</button>`;
+    </form>`;
 }
 
 function bindAktivasi() {
@@ -133,8 +138,8 @@ function bindRiwayat() {
     }
   });
   rows.addEventListener('click', async (event) => {
-    const { newPin } = event.target.dataset;
-    if (!newPin || !confirm('Buat PIN baru? PIN lama pembeli langsung tidak berlaku.')) return;
+    const { newPin } = event.target.closest('button')?.dataset ?? {};
+    if (!newPin || !await confirmBox({ title: 'Buat PIN baru pembeli?', text: 'PIN lama pembeli langsung tidak berlaku.', ok: 'Buat PIN baru' })) return;
     try {
       const made = await api(`/api/reseller/businesses/${newPin}/pin`, { method: 'POST' });
       result = pinTicket({ title: 'PIN pembeli baru', name: made.name, pin: made.pin });
@@ -169,16 +174,23 @@ function render() {
     else button.removeAttribute('aria-current');
   });
   const views = { aktivasi: aktivasiView, stok: stokView, riwayat: riwayatView, akun: akunView };
-  root.innerHTML = `<div class="topbar page-top"><h1>${TITLES[tab]}</h1></div>${views[tab]()}`;
+  root.innerHTML = `<div class="topbar page-top"><h1>${TITLES[tab]}</h1>${tab === 'akun' ? '<button class="btn btn-small" id="logout">Keluar</button>' : ''}</div>${views[tab]()}`;
   ({ aktivasi: bindAktivasi, riwayat: bindRiwayat, akun: bindAkun })[tab]?.();
 }
 
 async function refresh() {
   data = await api('/api/reseller/me');
+  loadedAt = Date.now();
   render();
 }
 
+// Isian yang sedang diketik tidak boleh hilang karena data diperbarui di belakang.
+const editing = () => root.contains(document.activeElement) && document.activeElement.matches('input:not([type=search]), textarea, select')
+  || [...root.querySelectorAll('input, textarea, select')].some((field) => field.type !== 'search' && field.value !== field.defaultValue);
+
 root.addEventListener('click', (event) => {
+  const chip = event.target.closest('[data-copy]');
+  if (chip) { copyCode(chip.dataset.copy); return; }
   const { use } = event.target.dataset;
   if (!use) return;
   prefillCode = use;
@@ -188,10 +200,19 @@ dock.addEventListener('click', (event) => {
   const button = event.target.closest('button');
   if (button) location.hash = button.dataset.tab;
 });
+// Pindah menu langsung memakai data yang sudah ada, lalu data terbaru diambil di belakang.
 addEventListener('hashchange', () => {
   result = '';
   scrollTo({ top: 0 });
-  if (data) refresh().catch(() => location.reload());
+  if (!data) return;
+  render();
+  if (Date.now() - loadedAt < 2000) return;
+  const tab = currentTab();
+  api('/api/reseller/me').then((fresh) => {
+    data = fresh;
+    loadedAt = Date.now();
+    if (currentTab() === tab && !editing()) render();
+  }).catch(() => {});
 });
 
 bindForm(document.getElementById('reseller-login'), async (values) => {

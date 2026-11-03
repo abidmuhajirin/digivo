@@ -18,7 +18,7 @@ BRAND = "TapUlas"
 # Tertanam permanen di NFC dan QR setiap kartu.
 BASE_URL = "https://maps.digivo.biz.id"
 # Nomor WhatsApp penjual, format internasional tanpa +.
-ADMIN_WA = "6283145496987"
+ADMIN_WA = "6283145396987"
 # Naikkan ke 100000 jika memakai Workers Paid. PIN lama tetap berlaku.
 PBKDF2_ITER = "10000"
 

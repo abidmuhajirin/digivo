@@ -104,6 +104,7 @@ function showPlan(name) {
     panel.classList.toggle('enter', active);
   });
   proOrder.dataset.waLink = PRO_TEXT[name];
+  document.getElementById('pro-term').textContent = name === 'tahun' ? 'Tahunan' : 'Bulanan';
   if (number) proOrder.href = waUrl(number, PRO_TEXT[name]);
   releasePro();
   const to = proCard.offsetHeight;
