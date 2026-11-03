@@ -34,7 +34,7 @@ h2 { font-size: 22px; font-weight: 700; }
 h3 { font-size: 16px; font-weight: 700; letter-spacing: -.01em; }
 h4 { font-size: 15px; font-weight: 700; }
 a { color: inherit; text-underline-offset: 3px; }
-button, input { font: inherit; color: inherit; }
+button, input, textarea { font: inherit; color: inherit; }
 button { cursor: pointer; }
 [hidden] { display: none !important; }
 .i { width: 20px; height: 20px; flex: none; }
@@ -51,7 +51,10 @@ button { cursor: pointer; }
 .wordmark .i { width: 24px; height: 24px; }
 .pill-link { position: relative; display: inline-flex; align-items: center; min-height: 30px; padding: 0 14px; border-radius: 99px; background: #fff; color: var(--blue-deep); font-size: 13px; font-weight: 700; text-decoration: none; }
 .pill-link::after { content: ''; position: absolute; inset: -7px -4px; }
-.hero h1 { margin-top: 24px; font-size: clamp(29px, 9.8vw, 40px); line-height: 1.06; font-weight: 800; letter-spacing: -.03em; }
+.hero-rate { display: inline-flex; align-items: center; gap: 8px; margin-top: 20px; padding: 6px 12px; border-radius: 99px; background: #ffffff26; box-shadow: inset 0 0 0 1px #ffffff4d; font-size: 14px; }
+.hero-rate b { font-weight: 800; font-stretch: 112%; }
+.hero-rate .stars { width: 86px; height: 16px; color: var(--yellow); }
+.hero h1 { margin-top: 14px; font-size: clamp(29px, 9.8vw, 40px); line-height: 1.06; font-weight: 800; letter-spacing: -.03em; }
 .hero h1 span { display: block; margin-top: 10px; color: var(--yellow); font-size: .58em; font-weight: 700; line-height: 1.2; letter-spacing: -.015em; }
 .lede { font-size: 15px; }
 
@@ -146,8 +149,12 @@ button { cursor: pointer; }
 /* Contoh dasbor */
 .stars { display: block; width: 92px; height: 17px; }
 .proof { margin: 16px var(--gutter) 0; padding: 24px 20px 20px; border-radius: 28px; background: #fff; display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; }
-.biz { display: flex; align-items: center; gap: 10px; min-width: 0; font-size: 15px; font-weight: 700; font-stretch: 112%; overflow-wrap: anywhere; }
-.biz span { width: 36px; height: 36px; flex: none; border-radius: 50%; display: grid; place-items: center; background: var(--yellow); color: var(--ink); font-weight: 800; }
+.biz { display: flex; align-items: center; gap: 12px; padding: 14px 16px; border-radius: 24px; background: var(--pale); }
+.biz-icon { width: 44px; height: 44px; flex: none; border-radius: 50%; display: grid; place-items: center; background: var(--blue); color: #fff; }
+.biz-icon .i { width: 22px; height: 22px; }
+.biz div { display: grid; min-width: 0; }
+.biz b { font-size: 15px; font-stretch: 112%; overflow-wrap: anywhere; }
+.biz div span { color: var(--ink-2); font-size: 13px; }
 .score { display: flex; align-items: center; gap: 12px; padding: 20px 16px; border-radius: 24px; background: var(--blue); color: #fff; }
 .score b { font-size: 56px; font-weight: 800; font-stretch: 112%; line-height: 1; letter-spacing: -.03em; }
 .score > div { min-width: 0; }
@@ -216,8 +223,29 @@ button { cursor: pointer; }
 .join { margin: 16px var(--gutter) 0; padding: 24px 20px 20px; border-radius: 28px; color: #fff; background: linear-gradient(172deg, var(--blue), var(--blue-deep)); }
 .join p { margin-top: 6px; }
 .join-btns { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin-top: 16px; }
-.join-btns a { display: flex; align-items: center; justify-content: center; min-height: 48px; padding: 0 8px; border: 1.5px solid #fff; border-radius: 99px; font-size: 14px; font-weight: 700; text-decoration: none; white-space: nowrap; }
-.join-btns .join-main { border-color: var(--yellow); background: var(--yellow); color: var(--ink); }
+.join-btns > * { display: flex; align-items: center; justify-content: center; min-height: 48px; padding: 0 8px; border: 1.5px solid #fff; border-radius: 99px; font-size: 14px; font-weight: 700; text-decoration: none; white-space: nowrap; }
+.join-btns .join-main { border-color: var(--yellow); background: var(--yellow); color: var(--ink); font: inherit; font-weight: 700; }
+
+/* Pop up daftar reseller */
+html:has(.dlg[open]) { overflow: hidden; }
+.dlg { width: min(100% - 32px, 440px); max-height: calc(100dvh - 32px); margin: max(16px, 6vh) auto auto; padding: 0; border: 0; border-radius: 28px; background: #fff; color: var(--ink); box-shadow: 0 30px 60px -20px #06205a80; overflow: hidden auto; overscroll-behavior: contain; }
+.dlg[open] { animation: dlg-in .32s var(--ease); }
+.dlg::backdrop { background: #0b1a3dad; }
+@keyframes dlg-in { from { opacity: 0; transform: translateY(16px) scale(.98); } }
+.dlg form { display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; padding: 20px; }
+.dlg .go { padding: 0 16px 0 66px; font-size: 14px; font-stretch: 100%; white-space: normal; line-height: 1.2; }
+.dlg-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.dlg-close { width: 44px; height: 44px; flex: none; margin: -6px -6px 0 0; border: 0; border-radius: 50%; display: grid; place-items: center; background: var(--pale); color: var(--ink); }
+.dlg-close .i { transform: rotate(45deg); }
+.dlg-lede { margin-top: -6px; color: var(--ink-2); font-size: 14px; }
+.field { display: grid; gap: 6px; font-size: 14px; font-weight: 600; }
+.field input, .field textarea { width: 100%; min-height: 48px; padding: 12px 16px; border: 1.5px solid #8892ad; border-radius: 16px; background: #fff; font-size: 16px; font-weight: 400; caret-color: var(--blue); resize: none; }
+.field textarea { min-height: 72px; }
+.field input::placeholder, .field textarea::placeholder { color: var(--ink-2); }
+.field input:focus, .field textarea:focus { outline: none; border-color: var(--blue); box-shadow: inset 0 0 0 1px var(--blue); }
+.field [aria-invalid='true'] { border-color: #c5221f; }
+.dlg-msg { color: #c5221f; font-size: 14px; font-weight: 600; }
+.dlg-msg:empty { display: none; }
 .join :focus-visible { outline-color: #fff; }
 .foot { padding: 20px var(--gutter) max(32px, env(safe-area-inset-bottom)); color: var(--ink-2); font-size: 13px; text-align: center; }
 
@@ -225,7 +253,8 @@ button { cursor: pointer; }
   .pill-link:hover { background: var(--yellow); color: var(--ink); }
   .action:hover span { transform: translateY(-3px); }
   .plan-btn:hover, .go:hover { filter: brightness(1.1); }
-  .join-btns a:hover { background: #fff; border-color: #fff; color: var(--blue-deep); }
+  .join-btns > *:hover { background: #fff; border-color: #fff; color: var(--blue-deep); }
+  .dlg-close:hover { background: var(--ink); color: #fff; }
   .insights-nav button:hover { background: var(--ink); color: #fff; }
   .go:hover span { transform: translateX(6px); }
 }

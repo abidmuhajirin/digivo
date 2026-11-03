@@ -77,6 +77,36 @@ slides.forEach((item, i) => { item.inert = i !== 0; });
 document.getElementById('insight-prev').addEventListener('click', () => turnInsight(-1));
 document.getElementById('insight-next').addEventListener('click', () => turnInsight(1));
 
+const joinDialog = document.getElementById('join-dialog');
+const joinForm = document.getElementById('join-form');
+const joinOpen = document.getElementById('join-open');
+const joinMsg = joinForm.querySelector('.dlg-msg');
+
+if (number) joinOpen.addEventListener('click', () => joinDialog.showModal());
+else joinOpen.hidden = true;
+joinDialog.querySelector('.dlg-close').addEventListener('click', () => joinDialog.close());
+joinDialog.addEventListener('click', (event) => { if (event.target === joinDialog) joinDialog.close(); });
+
+joinForm.addEventListener('submit', (event) => {
+  event.preventDefault();
+  const name = joinForm.name.value.trim();
+  const phone = joinForm.whatsapp.value.replace(/\D/g, '');
+  const address = joinForm.address.value.trim().replace(/\s+/g, ' ');
+  const problem = !name ? ['name', 'Isi nama.']
+    : !/^(0|62)8\d{7,12}$/.test(phone) ? ['whatsapp', 'Nomor WhatsApp belum benar. Contoh: 081234567890.']
+    : !address ? ['address', 'Isi alamat domisili.'] : null;
+  joinForm.querySelectorAll('[aria-invalid]').forEach((field) => field.removeAttribute('aria-invalid'));
+  joinMsg.textContent = problem ? problem[1] : '';
+  if (problem) {
+    joinForm[problem[0]].setAttribute('aria-invalid', 'true');
+    joinForm[problem[0]].focus();
+    return;
+  }
+  window.open(waUrl(number, `Halo, saya mau daftar jadi reseller kartu ulasan.\nNama: ${name}\nWhatsApp: ${phone}\nDomisili: ${address}`), '_blank', 'noopener');
+  joinForm.reset();
+  joinDialog.close();
+});
+
 const proof = document.querySelector('.proof');
 new IntersectionObserver((entries, observer) => {
   if (!entries[0].isIntersecting) return;

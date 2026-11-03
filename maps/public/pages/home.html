@@ -16,6 +16,7 @@
     <a class="wordmark" href="/"><svg class="i" aria-hidden="true"><use href="/icons.svg#tap"/></svg>{{BRAND}}</a>
     <a class="pill-link" href="/kelola">Masuk</a>
   </nav>
+  <p class="hero-rate"><b>5,0</b><svg class="stars" viewBox="0 0 120 22" role="img" aria-label="5 bintang"><use href="/icons.svg#stars5"/></svg></p>
   <h1>Satu tap, satu ulasan Google tanpa ribet. <span>Pelanggan mudah, pemilik bisnis bahagia!</span></h1>
   <figure class="mock" role="img" aria-label="Kartu akrilik 10 x 10 cm dengan NFC dan QR ulasan Google">
     <div class="plate" aria-hidden="true">
@@ -112,7 +113,10 @@
 
   <section class="proof" aria-labelledby="proof-title">
     <h2 id="proof-title">Hasil kartu terlihat dari ponsel</h2>
-    <p class="biz"><span aria-hidden="true">S</span>Sate Dino Pak Ti Rek!</p>
+    <div class="biz">
+      <span class="biz-icon"><svg class="i" aria-hidden="true"><use href="/icons.svg#store"/></svg></span>
+      <div><b>Sate Dino Pak Ti Rek!</b><span>Mlati, Sleman, Yogyakarta</span></div>
+    </div>
 
     <div class="score">
       <b>4,9</b>
@@ -173,9 +177,9 @@
 
   <section class="join" aria-labelledby="join-title">
     <h2 id="join-title">Jadi reseller, dapat cuan tambahan</h2>
-    <p>Bisnis yang masih belum banyak orang jalankan.</p>
+    <p>Bisnis yang masih belum banyak orang jalankan. Komisi 30% dari setiap penjualan, baik paket Basic maupun langganan Pro.</p>
     <div class="join-btns">
-      <a class="join-main" data-wa-link="Halo, saya mau daftar jadi reseller kartu ulasan." href="/reseller">Daftar reseller</a>
+      <button class="join-main" type="button" id="join-open">Daftar reseller</button>
       <a href="/reseller">Masuk reseller</a>
     </div>
   </section>
@@ -183,6 +187,21 @@
   <footer class="foot">
     <p>{{BRAND}} tidak berafiliasi dengan Google.</p>
   </footer>
+
+  <dialog class="dlg" id="join-dialog" aria-labelledby="join-dialog-title">
+    <form id="join-form" novalidate>
+      <div class="dlg-head">
+        <h2 id="join-dialog-title">Daftar reseller</h2>
+        <button class="dlg-close" type="button" aria-label="Tutup"><svg class="i" aria-hidden="true"><use href="/icons.svg#plus"/></svg></button>
+      </div>
+      <p class="dlg-lede">Komisi 30% dari setiap penjualan, baik paket Basic maupun langganan Pro. Data dikirim ke admin lewat WhatsApp.</p>
+      <label class="field"><span>Nama</span><input name="name" maxlength="80" required autocomplete="name"></label>
+      <label class="field"><span>Nomor WhatsApp</span><input name="whatsapp" inputmode="tel" maxlength="20" required autocomplete="tel" placeholder="08xxxxxxxxxx"></label>
+      <label class="field"><span>Alamat domisili</span><textarea name="address" rows="2" maxlength="160" required autocomplete="street-address" placeholder="Kecamatan, kota"></textarea></label>
+      <p class="dlg-msg" role="alert"></p>
+      <button class="go" type="submit"><span><svg class="i" aria-hidden="true"><use href="/icons.svg#back"/></svg></span>Kirim lewat WhatsApp</button>
+    </form>
+  </dialog>
 </main>
 <script type="module" src="/js/home.js"></script>
 </body>
