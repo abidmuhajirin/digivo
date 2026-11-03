@@ -144,6 +144,7 @@ button { cursor: pointer; }
 .btn-danger:active { background: #ffe4e1; }
 .btn-small { min-height: 36px; padding: 6px 14px; font-size: 13px; }
 .cta[disabled], .btn[disabled] { opacity: .6; cursor: progress; }
+.text-link { color: var(--blue); font-weight: 600; }
 .text-btn { background: none; border: 0; padding: 4px 0; font-weight: 600; color: var(--ink); text-decoration: underline; }
 
 @media (hover: hover) {

@@ -84,8 +84,14 @@ const joinMsg = joinForm.querySelector('.dlg-msg');
 
 if (number) joinOpen.addEventListener('click', () => joinDialog.showModal());
 else joinOpen.hidden = true;
-joinDialog.querySelector('.dlg-close').addEventListener('click', () => joinDialog.close());
-joinDialog.addEventListener('click', (event) => { if (event.target === joinDialog) joinDialog.close(); });
+document.getElementById('login-open').addEventListener('click', (event) => {
+  event.preventDefault();
+  document.getElementById('login-dialog').showModal();
+});
+document.querySelectorAll('.dlg').forEach((dialog) => {
+  dialog.querySelector('.dlg-close').addEventListener('click', () => dialog.close());
+  dialog.addEventListener('click', (event) => { if (event.target === dialog) dialog.close(); });
+});
 
 joinForm.addEventListener('submit', (event) => {
   event.preventDefault();
@@ -106,6 +112,31 @@ joinForm.addEventListener('submit', (event) => {
   joinForm.reset();
   joinDialog.close();
 });
+
+// Contoh pengunjung per jam, 10.00 sampai 21.00.
+const VISITS = {"Sen":[8,14,30,26,12,10,16,30,52,60,48,24],"Sel":[10,16,32,28,14,12,18,34,56,64,50,26],"Rab":[9,15,34,30,12,10,20,36,58,62,46,22],"Kam":[10,18,36,30,14,12,22,40,62,66,52,28],"Jum":[6,10,18,40,34,14,24,44,68,72,60,34],"Sab":[20,28,44,40,30,28,36,52,62,70,72,66],"Ahad":[30,42,58,62,54,40,44,50,56,52,40,24]};
+const DAY_NAMES = {"Sen":"Senin","Sel":"Selasa","Rab":"Rabu","Kam":"Kamis","Jum":"Jumat","Sab":"Sabtu","Ahad":"Ahad"};
+const visitBars = [...document.querySelectorAll('.visit-bars i')];
+const visitChart = document.querySelector('.visit-bars');
+const visitNote = document.querySelector('.visit-note span');
+const dayButtons = [...document.querySelectorAll('.visit-days button')];
+const clock = (index) => `${String(10 + index).padStart(2, '0')}.00`;
+
+function showDay(day) {
+  const counts = VISITS[day];
+  let peak = 0;
+  for (let i = 1; i <= counts.length - 3; i += 1) {
+    if (counts[i] + counts[i + 1] + counts[i + 2] > counts[peak] + counts[peak + 1] + counts[peak + 2]) peak = i;
+  }
+  visitBars.forEach((bar, i) => {
+    bar.style.height = `${counts[i]}px`;
+    bar.classList.toggle('hot', i >= peak && i < peak + 3);
+  });
+  dayButtons.forEach((button) => button.setAttribute('aria-pressed', button.dataset.day === day));
+  visitNote.textContent = `Paling ramai pukul ${clock(peak)}-${clock(peak + 2)}`;
+  visitChart.setAttribute('aria-label', `${DAY_NAMES[day]}, paling ramai pukul ${clock(peak)} sampai ${clock(peak + 2)}`);
+}
+dayButtons.forEach((button) => button.addEventListener('click', () => showDay(button.dataset.day)));
 
 const proof = document.querySelector('.proof');
 new IntersectionObserver((entries, observer) => {

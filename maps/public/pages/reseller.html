@@ -9,16 +9,25 @@
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="/css/app.css">
 </head>
-<body>
-<main class="wrap app-main stack" id="reseller">
+<body data-tone="yellow">
+<main class="wrap stack app-main" id="reseller">
+  <div class="topbar page-top">
+    <a class="circle-btn" href="/" aria-label="Kembali ke halaman utama"><svg class="i" aria-hidden="true"><use href="/icons.svg#back"/></svg></a>
+    <h1 class="grow">Masuk reseller</h1>
+  </div>
+
   <form id="reseller-login" class="panel stack-sm">
-    <h2>Masuk reseller</h2>
+    <h2>Masuk</h2>
     <label class="field"><span>Nomor WhatsApp</span><input name="whatsapp" inputmode="tel" maxlength="20" required placeholder="08xxxxxxxxxx" autocomplete="username"></label>
     <label class="field"><span>PIN</span><input class="pin" name="pin" type="password" inputmode="numeric" maxlength="6" required autocomplete="current-password"></label>
     <p class="form-msg" role="alert"></p>
     <button class="cta" type="submit">Masuk</button>
-    <p class="muted">Belum terdaftar atau lupa PIN? Hubungi admin.</p>
   </form>
+
+  <details class="panel drawer">
+    <summary>Lupa PIN</summary>
+    <p class="muted">Belum terdaftar atau lupa PIN? <a class="text-link" href="https://wa.me/{{ADMIN_WA}}?text=Halo%20admin%2C%20saya%20belum%20terdaftar%20atau%20lupa%20PIN." target="_blank" rel="noopener">Hubungi admin</a>.</p>
+  </details>
 </main>
 <nav class="dock" aria-label="Menu reseller" hidden>
   <button data-tab="aktivasi"><svg class="i" aria-hidden="true"><use href="/icons.svg#plus"/></svg>Aktivasi</button>

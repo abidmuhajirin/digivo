@@ -14,7 +14,7 @@
 <header class="hero">
   <nav class="nav" aria-label="Utama">
     <a class="wordmark" href="/"><svg class="i" aria-hidden="true"><use href="/icons.svg#tap"/></svg>{{BRAND}}</a>
-    <a class="pill-link" href="/kelola">Masuk</a>
+    <a class="pill-link" href="/kelola" id="login-open">Masuk</a>
   </nav>
   <p class="hero-rate"><b>5,0</b><svg class="stars" viewBox="0 0 120 22" role="img" aria-label="5 bintang"><use href="/icons.svg#stars5"/></svg></p>
   <h1>Satu tap, satu ulasan Google tanpa ribet. <span>Pelanggan mudah, pemilik bisnis bahagia!</span></h1>
@@ -139,11 +139,14 @@
 
     <div class="visits">
       <h3>Jam pengunjung</h3>
-      <div class="visit-bars" role="img" aria-label="Pengunjung paling ramai pukul 18.00 sampai 20.00">
+      <div class="visit-days" role="group" aria-label="Pilih hari">
+        <button type="button" data-day="Sen" aria-label="Senin" aria-pressed="true">Sen</button><button type="button" data-day="Sel" aria-label="Selasa" aria-pressed="false">Sel</button><button type="button" data-day="Rab" aria-label="Rabu" aria-pressed="false">Rab</button><button type="button" data-day="Kam" aria-label="Kamis" aria-pressed="false">Kam</button><button type="button" data-day="Jum" aria-label="Jumat" aria-pressed="false">Jum</button><button type="button" data-day="Sab" aria-label="Sabtu" aria-pressed="false">Sab</button><button type="button" data-day="Ahad" aria-label="Ahad" aria-pressed="false">Ahad</button>
+      </div>
+      <div class="visit-bars" role="img" aria-label="Senin, paling ramai pukul 18.00 sampai 20.00">
         <i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i class="hot"></i><i class="hot"></i><i class="hot"></i><i></i>
       </div>
       <div class="visit-axis"><span>10.00</span><span>21.00</span></div>
-      <p class="visit-note"><i></i>Paling ramai pukul 18.00-20.00</p>
+      <p class="visit-note" aria-live="polite"><i></i><span>Paling ramai pukul 18.00-20.00</span></p>
     </div>
 
     <div class="insights-box">
@@ -180,7 +183,6 @@
     <p>Bisnis yang masih belum banyak orang jalankan. Komisi 30% dari setiap penjualan, baik paket Basic maupun langganan Pro.</p>
     <div class="join-btns">
       <button class="join-main" type="button" id="join-open">Daftar reseller</button>
-      <a href="/reseller">Masuk reseller</a>
     </div>
   </section>
 
@@ -201,6 +203,25 @@
       <p class="dlg-msg" role="alert"></p>
       <button class="go" type="submit"><span><svg class="i" aria-hidden="true"><use href="/icons.svg#back"/></svg></span>Kirim lewat WhatsApp</button>
     </form>
+  </dialog>
+
+  <dialog class="dlg" id="login-dialog" aria-labelledby="login-dialog-title">
+    <div class="dlg-body">
+      <div class="dlg-head">
+        <h2 id="login-dialog-title">Masuk sebagai</h2>
+        <button class="dlg-close" type="button" aria-label="Tutup"><svg class="i" aria-hidden="true"><use href="/icons.svg#plus"/></svg></button>
+      </div>
+      <a class="choice" href="/kelola">
+        <span class="choice-icon"><svg class="i" aria-hidden="true"><use href="/icons.svg#card"/></svg></span>
+        <span class="choice-text"><b>Pemilik kartu</b><small>Lihat ulasan, tap, dan atur kartu.</small></span>
+        <svg class="i choice-go" aria-hidden="true"><use href="/icons.svg#back"/></svg>
+      </a>
+      <a class="choice" href="/reseller">
+        <span class="choice-icon choice-yellow"><svg class="i" aria-hidden="true"><use href="/icons.svg#store"/></svg></span>
+        <span class="choice-text"><b>Reseller</b><small>Aktifkan kartu pembeli dan lihat penjualan.</small></span>
+        <svg class="i choice-go" aria-hidden="true"><use href="/icons.svg#back"/></svg>
+      </a>
+    </div>
   </dialog>
 </main>
 <script type="module" src="/js/home.js"></script>
