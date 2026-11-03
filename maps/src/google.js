@@ -64,9 +64,9 @@ export function classifyLink(raw) {
   }
   url.protocol = 'https:';
 
-  // Halaman persetujuan cookie Google membawa tujuan asli di parameter continue.
-  const continued = url.hostname.startsWith('consent.') && url.searchParams.get('continue');
-  if (continued) return classifyLink(continued);
+  // Halaman persetujuan cookie dan halaman cek bot Google membawa tujuan asli di parameter continue.
+  const continued = url.searchParams.get('continue');
+  if (continued && continued !== url.href) return classifyLink(continued);
 
   const placeId = url.searchParams.get('placeid') || url.searchParams.get('place_id')
     || url.searchParams.get('q')?.match(/^place_id:(.+)$/)?.[1]
@@ -79,15 +79,16 @@ export function classifyLink(raw) {
     return { ok: true, kind: 'maps', url: url.href };
   }
   if (SHORT_HOSTS.has(url.hostname)) return { ok: true, kind: 'short', url: url.href };
+  // Angka hex tempat bisa muncul di mana saja, termasuk di link Maps yang dibungkus halaman lain.
+  const feature = featureFromUrl(url.href);
+  if (feature) {
+    const id = placeIdFromFeature(feature[1], feature[2]);
+    return { ok: true, kind: 'review', url: reviewUrlForPlace(id), placeId: id, nameGuess: nameFromPath(url.pathname) };
+  }
   if (url.pathname.includes('/maps') || url.searchParams.has('cid')) {
-    const feature = featureFromUrl(url.href);
-    if (feature) {
-      const id = placeIdFromFeature(feature[1], feature[2]);
-      return { ok: true, kind: 'review', url: reviewUrlForPlace(id), placeId: id, nameGuess: nameFromPath(url.pathname) };
-    }
     return { ok: true, kind: 'maps', url: url.href, nameGuess: nameFromPath(url.pathname) };
   }
-  return { ok: false, error: 'Link ini bukan halaman bisnis. Buka bisnis di Google Maps, lalu salin link Bagikan.' };
+  return { ok: false, error: 'Link ini bukan halaman bisnis. Buka bisnis di Google Maps, lalu salin link Bagikan.', seen: url.hostname + url.pathname };
 }
 
 async function followShortLink(start, fetchImpl) {

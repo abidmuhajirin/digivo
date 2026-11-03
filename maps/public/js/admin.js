@@ -1,12 +1,14 @@
-import { api, bindForm, esc, formatDate, toast } from '/js/common.js';
-import { activationTicket, buyerFormFields, destinationNote, pinTicket, showResult } from '/js/sales.js';
+import { api, bindForm, esc, formatDate, icon, toast } from '/js/common.js';
+import { activationTicket, attachPlaceSearch, buyerFormFields, destinationNote, pinTicket, showResult } from '/js/sales.js';
 
 const root = document.getElementById('admin');
 const dock = document.querySelector('.dock');
 const TABS = ['jual', 'kartu', 'reseller', 'bisnis'];
-const TONES = { jual: 'yellow', kartu: 'green', reseller: 'blue', bisnis: 'red' };
+const TONES = { jual: 'yellow', kartu: 'purple', reseller: 'blue', bisnis: 'coral' };
 const TITLES = { jual: 'Aktivasi pembeli', kartu: 'Stok kartu', reseller: 'Reseller', bisnis: 'Bisnis' };
 let overview;
+let loadedAt = 0;
+let searchQuery = '';
 let result = '';
 
 const currentTab = () => (TABS.includes(location.hash.slice(1)) ? location.hash.slice(1) : 'jual');
@@ -19,6 +21,20 @@ const proLabel = (b) => {
   return b.proUntil ? `Pro s.d. ${formatDate(b.proUntil)}` : 'Pro';
 };
 
+const isActivePro = (b) => b.plan === 'pro' && (!b.proUntil || b.proUntil > Date.now());
+const tier = (b) => (isActivePro(b)
+  ? `<span class="tier tier-pro">${icon('verified')}Pro</span>`
+  : `<span class="tier tier-basic">${icon('verified')}Basic</span>`);
+const resellerName = (id) => overview.resellers.find((r) => r.id === id)?.name ?? 'reseller';
+
+// Sisa kartu kosong per pemegang, supaya terlihat berapa yang bisa ditarik dari tiap reseller.
+function batchLabel(b) {
+  const rows = overview.batchStock.filter((row) => row.batchId === b.id);
+  const total = rows.reduce((sum, row) => sum + row.n, 0);
+  const holders = rows.map((row) => `${row.resellerId ? resellerName(row.resellerId) : 'pusat'} ${row.n}`).join(', ');
+  return `Batch #${b.id}${b.note ? ` · ${b.note}` : ''} (${total ? `sisa ${total}: ${holders}` : 'habis'})`;
+}
+
 function businessRows(filter = '') {
   const query = filter.toLowerCase();
   const rows = overview.businessList.filter((b) =>
@@ -29,7 +45,7 @@ function businessRows(filter = '') {
   return rows.map((b) => `
     <article class="admin-row">
       <div>
-        ${esc(b.name)}${b.isDemo ? ' <span class="muted">(demo)</span>' : ''}
+        ${esc(b.name)}${tier(b)}${b.isDemo ? ' <span class="muted">(demo)</span>' : ''}
         <small>${esc(proLabel(b))} · ${b.cards} kartu · ${b.taps30} tap 30 hari${b.linkLocked ? ' · link terkunci' : ''}</small>
         <small>${b.seller ? `Reseller: ${esc(b.seller)}` : 'Penjualan pusat'}</small>
         <small class="mono">${esc(b.codes ?? '')}</small>
@@ -146,7 +162,7 @@ function resellerRows() {
 
 function resellerView() {
   const options = overview.resellers.filter((r) => r.active)
-    .map((r) => `<option value="${r.id}">${esc(r.name)}</option>`).join('');
+    .map((r) => `<option value="${r.id}">${esc(r.name)} (stok ${r.stock})</option>`).join('');
   return `
     ${result}
     <section class="panel">
@@ -168,7 +184,7 @@ function resellerView() {
         <label class="field"><span>Serahkan ke</span>
           <select name="resellerId" required>${options}<option value="0">Stok pusat (tarik dari reseller)</option></select></label>
         <label class="field"><span>Satu batch penuh</span>
-          <select name="batchId"><option value="">Tidak, pakai daftar kode</option>${overview.batches.map((b) => `<option value="${b.id}">Batch #${b.id}${b.note ? ` · ${esc(b.note)}` : ''}</option>`).join('')}</select></label>
+          <select name="batchId"><option value="">Tidak, pakai daftar kode</option>${overview.batches.map((b) => `<option value="${b.id}">${esc(batchLabel(b))}</option>`).join('')}</select></label>
         <label class="field"><span>Kode kartu</span>
           <textarea name="codes" rows="3" placeholder="Pisahkan dengan spasi atau baris baru"></textarea>
           <small>Kartu yang sudah aktif dilewati.</small></label>
@@ -185,8 +201,8 @@ function bisnisView() {
     ${result}
     <section class="panel">
       <h2>Bisnis</h2>
-      <input class="search" id="search" type="search" aria-label="Cari bisnis, kode kartu, atau reseller" placeholder="Cari nama, kode, atau reseller">
-      <div id="rows">${businessRows()}</div>
+      <input class="search" id="search" type="search" aria-label="Cari bisnis, kode kartu, atau reseller" placeholder="Cari nama, kode, atau reseller" value="${esc(searchQuery)}">
+      <div id="rows">${businessRows(searchQuery)}</div>
     </section>`;
 }
 
@@ -196,6 +212,7 @@ const reload = async (message) => {
 };
 
 function bindJual() {
+  attachPlaceSearch(document.getElementById('activate'));
   bindForm(document.getElementById('activate'), async (values) => {
     const activated = await api('/api/admin/activate', { method: 'POST', body: values });
     result = activationTicket(activated);
@@ -269,7 +286,8 @@ function bindReseller() {
 
 function bindBisnis() {
   document.getElementById('search').addEventListener('input', (event) => {
-    document.getElementById('rows').innerHTML = businessRows(event.target.value);
+    searchQuery = event.target.value;
+    document.getElementById('rows').innerHTML = businessRows(searchQuery);
   });
   const rows = document.getElementById('rows');
   rows.addEventListener('submit', async (event) => {
@@ -327,17 +345,35 @@ function render() {
 
 async function refresh() {
   overview = await api('/api/admin/overview');
+  loadedAt = Date.now();
   render();
 }
+
+// Isian yang sedang diketik tidak boleh hilang karena data diperbarui di belakang.
+const editing = () => root.contains(document.activeElement) && document.activeElement.matches('input:not([type=search]), textarea, select')
+  || [...root.querySelectorAll('input, textarea, select')].some((field) => {
+    if (field.type === 'search') return false;
+    if (field.tagName === 'SELECT') return [...field.options].some((option) => option.selected !== option.defaultSelected);
+    return field.value !== field.defaultValue;
+  });
 
 dock.addEventListener('click', (event) => {
   const button = event.target.closest('button');
   if (button) location.hash = button.dataset.tab;
 });
+// Pindah menu langsung memakai data yang sudah ada, lalu data terbaru diambil di belakang.
 addEventListener('hashchange', () => {
   result = '';
   scrollTo({ top: 0 });
-  if (overview) refresh().catch(() => location.reload());
+  if (!overview) return;
+  render();
+  if (Date.now() - loadedAt < 2000) return;
+  const tabAtRequest = currentTab();
+  api('/api/admin/overview').then((fresh) => {
+    overview = fresh;
+    loadedAt = Date.now();
+    if (currentTab() === tabAtRequest && !editing()) render();
+  }).catch(() => {});
 });
 
 bindForm(document.getElementById('admin-login'), async (values) => {

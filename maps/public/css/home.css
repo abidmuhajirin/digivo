@@ -178,6 +178,9 @@ button { cursor: pointer; }
 .proof.in .meter i::after { animation: grow .9s var(--ease) backwards; }
 @keyframes grow { from { width: 0; } }
 .visits { display: grid; gap: 8px; padding: 8px 4px; }
+.visits-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 2px 8px; }
+.visits-head h3 span { color: var(--red); }
+.visits-head small { color: var(--ink-2); font-size: 12px; }
 .visit-days { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; }
 .visit-days button { min-height: 44px; padding: 0; border: 0; border-radius: 12px; background: var(--pale); color: var(--ink); font-size: 13px; font-weight: 600; transition: background .2s, color .2s; }
 .visit-days button[aria-pressed='true'] { background: var(--blue); color: #fff; }

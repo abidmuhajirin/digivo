@@ -51,3 +51,12 @@ export function waUrl(number, text) {
 export function formatDate(ts) {
   return new Intl.DateTimeFormat('id-ID', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'Asia/Jakarta' }).format(ts);
 }
+
+// Kode aktivasi tercetak XXXX-XXXX, jadi strip muncul sendiri saat diketik. Server tetap menerima tanpa strip.
+document.addEventListener('input', (event) => {
+  const field = event.target;
+  if (field.name !== 'activationCode') return;
+  const raw = field.value.toUpperCase().replace(/[^0-9A-Z]/g, '').slice(0, 8);
+  const value = raw.length > 4 ? `${raw.slice(0, 4)}-${raw.slice(4)}` : raw;
+  if (value !== field.value) field.value = value;
+});

@@ -67,6 +67,7 @@ test('link Maps panjang langsung jadi link form ulasan tanpa API key', () => {
 
   const inner = encodeURIComponent('https://www.google.com/maps/place/Sydney/data=!1s0x6b12ae37b47f5b37:0x8eaddfcd1b32ca52');
   assert.equal(classifyLink(`https://consent.google.com/m?continue=${inner}`).kind, 'review');
+  assert.equal(classifyLink(`https://www.google.com/sorry/index?continue=${inner}&q=abc`).kind, 'review');
 });
 
 test('link pendek: dibuka dulu lalu dikonversi', async () => {

@@ -20,6 +20,7 @@ class Statement {
   }
 
   async run() {
+    if (/^\s*(SELECT|WITH)\b/i.test(this.sql)) return { results: this.sqlite.prepare(this.sql).all(...this.args), meta: {} };
     const result = this.sqlite.prepare(this.sql).run(...this.args);
     return { meta: { last_row_id: Number(result.lastInsertRowid), changes: Number(result.changes) } };
   }

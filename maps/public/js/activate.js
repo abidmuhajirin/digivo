@@ -11,7 +11,10 @@ let placeId = null;
 const codeFromPath = location.pathname.split('/')[2];
 if (codeFromPath) form.code.value = codeFromPath;
 // QR di lembar aktivasi membawa kodenya di fragmen, jadi pembeli online tidak perlu mengetik.
-if (location.hash.length > 1) form.activationCode.value = location.hash.slice(1);
+if (location.hash.length > 1) {
+  form.activationCode.value = location.hash.slice(1);
+  form.activationCode.dispatchEvent(new Event('input', { bubbles: true }));
+}
 (codeFromPath ? form.activationCode : form.code).focus();
 
 const config = await api('/api/config').catch(() => ({ placesEnabled: false }));

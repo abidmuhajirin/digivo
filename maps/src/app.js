@@ -696,34 +696,42 @@ export function createApp() {
     return c.json({ ok: true });
   });
 
+  // Semua angka panel admin diambil dalam satu kali panggilan D1, supaya pindah menu tidak menunggu banyak perjalanan ke database.
   app.get('/api/admin/overview', requireAdmin, async (c) => {
-    const count = async (sql, ...args) => (await first(c, sql, ...args)).n;
     const now = Date.now();
     const since = now - 30 * DAY;
-    return c.json({
-      ready: await count('SELECT COUNT(*) AS n FROM cards WHERE business_id IS NULL'),
-      active: await count('SELECT COUNT(*) AS n FROM cards WHERE business_id IS NOT NULL'),
-      businesses: await count('SELECT COUNT(*) AS n FROM businesses WHERE is_demo = 0'),
-      pro: await count("SELECT COUNT(*) AS n FROM businesses WHERE plan = 'pro' AND is_trial = 0 AND is_demo = 0 AND (pro_until IS NULL OR pro_until > ?)", now),
-      trials: await count("SELECT COUNT(*) AS n FROM businesses WHERE plan = 'pro' AND is_trial = 1 AND is_demo = 0 AND pro_until > ?", now),
-      taps30: await count("SELECT COUNT(*) AS n FROM events WHERE type = 'tap' AND ts >= ?", since),
-      defaultUrl: await defaultDestination(c),
-      resellers: await all(c, `
-        SELECT r.id, r.name, r.whatsapp, r.city, r.active, r.created_at AS createdAt,
+    const query = (sql, ...args) => c.env.DB.prepare(sql).bind(...args);
+    const [totals, resellers, batches, batchStock, businessList] = await c.env.DB.batch([
+      query(`SELECT
+          (SELECT COUNT(*) FROM cards WHERE business_id IS NULL) AS ready,
+          (SELECT COUNT(*) FROM cards WHERE business_id IS NOT NULL) AS active,
+          (SELECT COUNT(*) FROM businesses WHERE is_demo = 0) AS businesses,
+          (SELECT COUNT(*) FROM businesses WHERE plan = 'pro' AND is_trial = 0 AND is_demo = 0 AND (pro_until IS NULL OR pro_until > ?1)) AS pro,
+          (SELECT COUNT(*) FROM businesses WHERE plan = 'pro' AND is_trial = 1 AND is_demo = 0 AND pro_until > ?1) AS trials,
+          (SELECT COUNT(*) FROM events WHERE type = 'tap' AND ts >= ?2) AS taps30,
+          (SELECT value FROM settings WHERE key = 'default_url') AS defaultUrl`, now, since),
+      query(`SELECT r.id, r.name, r.whatsapp, r.city, r.active, r.created_at AS createdAt,
           (SELECT COUNT(*) FROM cards k WHERE k.reseller_id = r.id AND k.business_id IS NULL) AS stock,
           (SELECT COUNT(*) FROM cards k WHERE k.reseller_id = r.id AND k.business_id IS NOT NULL) AS sold
         FROM resellers r ORDER BY r.active DESC, r.created_at DESC LIMIT 500`),
-      batches: await all(c, `
-        SELECT b.id, b.note, b.qty, b.created_at AS createdAt,
+      query(`SELECT b.id, b.note, b.qty, b.created_at AS createdAt,
           (SELECT COUNT(*) FROM cards c WHERE c.batch_id = b.id AND c.business_id IS NOT NULL) AS activated
         FROM batches b ORDER BY b.id DESC LIMIT 50`),
-      businessList: await all(c, `
-        SELECT b.id, b.name, b.review_url AS reviewUrl, b.link_kind AS linkKind, b.plan, b.pro_until AS proUntil, b.is_trial AS isTrial, b.is_demo AS isDemo, b.link_locked AS linkLocked, b.created_at AS createdAt,
+      query(`SELECT batch_id AS batchId, reseller_id AS resellerId, COUNT(*) AS n FROM cards
+        WHERE business_id IS NULL GROUP BY batch_id, reseller_id`),
+      query(`SELECT b.id, b.name, b.review_url AS reviewUrl, b.link_kind AS linkKind, b.plan, b.pro_until AS proUntil, b.is_trial AS isTrial, b.is_demo AS isDemo, b.link_locked AS linkLocked, b.created_at AS createdAt,
           (SELECT COUNT(*) FROM cards c WHERE c.business_id = b.id) AS cards,
           (SELECT GROUP_CONCAT(c.code, ' ') FROM cards c WHERE c.business_id = b.id) AS codes,
           (SELECT r.name FROM cards c JOIN resellers r ON r.id = c.reseller_id WHERE c.business_id = b.id LIMIT 1) AS seller,
           (SELECT COUNT(*) FROM events e WHERE e.business_id = b.id AND e.type = 'tap' AND e.ts >= ?) AS taps30
         FROM businesses b ORDER BY b.created_at DESC LIMIT 500`, since),
+    ]);
+    return c.json({
+      ...totals.results[0],
+      resellers: resellers.results,
+      batches: batches.results,
+      batchStock: batchStock.results,
+      businessList: businessList.results,
     });
   });
 

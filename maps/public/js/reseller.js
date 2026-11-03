@@ -1,5 +1,5 @@
 import { api, bindForm, esc, formatDate, toast } from '/js/common.js';
-import { activationTicket, buyerFormFields, destinationNote, pinTicket, showResult } from '/js/sales.js';
+import { activationTicket, attachPlaceSearch, buyerFormFields, destinationNote, pinTicket, showResult } from '/js/sales.js';
 
 const root = document.getElementById('reseller');
 const dock = document.querySelector('.dock');
@@ -102,6 +102,7 @@ function bindAktivasi() {
   if (!form) return;
   form.code.value = prefillCode;
   prefillCode = '';
+  attachPlaceSearch(form);
   bindForm(form, async (values) => {
     const activated = await api('/api/reseller/activate', { method: 'POST', body: values });
     result = activationTicket(activated);
