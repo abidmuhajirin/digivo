@@ -42,6 +42,12 @@ html:has(body.admin-ui) { background: #dfe6f4; }
 .admin-ui { --yellow: #ffd93b; --blue: #0a6cf5; --ink: #1b2341; --ink-2: #566080; --canvas: #eef2fa; --line: #e3e9f5; --line-2: #8892ad; --track: #e3e9f5; --yellow-50: #fff6c7; }
 .admin-ui:not([data-tone]), .admin-ui[data-tone='yellow'] { --tone: var(--yellow); }
 .admin-ui .ticket { --f: #fff; box-shadow: inset 0 0 0 2px var(--blue); }
+.usage-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 6px 12px; font-size: 14px; }
+.usage-row b { font-variant-numeric: tabular-nums; }
+.usage-bar { grid-column: 1 / -1; display: block; height: 8px; border-radius: 99px; background: var(--track); overflow: hidden; }
+.usage-bar i { display: block; height: 100%; min-width: 2px; border-radius: 99px; background: var(--blue); }
+.usage-row.hot b { color: var(--red-ink); }
+.usage-row.hot .usage-bar i { background: var(--red-ink); }
 .tier { display: inline-flex; align-items: center; gap: 4px; margin-left: 6px; padding: 2px 9px 2px 4px; border-radius: 99px; font-size: 12px; font-weight: 700; line-height: 1.4; vertical-align: 1px; }
 .tier .i { width: 16px; height: 16px; }
 .tier-basic { background: #eceff3; color: #4b5563; }

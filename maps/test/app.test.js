@@ -483,3 +483,45 @@ test('admin: aktivasi membuat tujuan terkunci, aktivasi mandiri tetap bebas', as
   const { cookie } = await activate(cards[21]);
   assert.equal((await call('/api/me', { method: 'PUT', cookie, body: { link: 'https://g.page/r/CLAIN/review' } })).status, 200);
 });
+
+test('panggilan Google tercatat, angka awal manual tetap, data Google lama dibuang', async () => {
+  const fetchImpl = async (url) => (url.includes('searchText')
+    ? Response.json({ places: [{ id: 'ChIJabc', displayName: { text: 'Sate Uji' }, formattedAddress: 'Mlati' }] })
+    : Response.json({ userRatingCount: 30, rating: 4.6 }));
+  const keyed = callWith({ ...env, GOOGLE_PLACES_API_KEY: 'kunci-uji', fetchImpl });
+  const month = new Date().toISOString().slice(0, 7);
+  const used = (kind) => Number(db.sqlite.prepare('SELECT value FROM settings WHERE key = ?').get(`google_calls:${month}:${kind}`)?.value ?? 0);
+  const [search0, details0] = [used('search'), used('details')];
+
+  assert.equal((await keyed('/api/places?q=sate%20uji')).status, 200);
+  assert.equal(used('search'), search0 + 1);
+
+  const card = cards[22];
+  const res = await keyed('/api/activate', {
+    method: 'POST',
+    body: {
+      code: card.code, activationCode: card.activation_code, name: 'Retensi Uji', pin: PIN, reviewCount: '12', rating: '4,1',
+      link: 'https://www.google.com/maps/place/X/data=!1s0x6b12ae37b47f5b37:0x8eaddfcd1b32ca52',
+    },
+  });
+  assert.equal(res.status, 200);
+  assert.equal(used('details'), details0 + 1);
+  const { business_id: id } = db.sqlite.prepare('SELECT business_id FROM cards WHERE code = ?').get(card.code);
+  const rows = () => db.sqlite.prepare('SELECT review_count, source FROM review_snapshots WHERE business_id = ? ORDER BY taken_at, id').all(id);
+  assert.deepEqual(rows().map((r) => [r.review_count, r.source]), [[12, 'manual'], [30, 'google']]);
+
+  // Angka Google berumur 40 hari terhapus saat angka baru diambil, angka manual tidak.
+  db.sqlite.prepare("INSERT INTO review_snapshots (business_id, review_count, rating, source, taken_at) VALUES (?, 5, 4, 'google', ?)").run(id, Date.now() - 40 * 86_400_000);
+  db.sqlite.prepare("UPDATE review_snapshots SET taken_at = taken_at - 2 * 86400000 WHERE business_id = ? AND review_count IN (12, 30)").run(id);
+  const cookie = (await keyed('/api/login', { method: 'POST', body: { code: card.code, pin: PIN } })).headers.get('set-cookie').split(';')[0];
+  const stats = await (await keyed('/api/stats', { cookie })).json();
+  assert.equal(used('details'), details0 + 2);
+  assert.deepEqual(rows().map((r) => [r.review_count, r.source]), [[12, 'manual'], [30, 'google'], [30, 'google']]);
+  assert.equal(stats.beforeAfter.before.count, 12);
+
+  const admin = (await keyed('/api/admin/login', { method: 'POST', body: { password: 'sandi-uji' } })).headers.get('set-cookie').split(';')[0];
+  const overview = await (await keyed('/api/admin/overview', { cookie: admin })).json();
+  assert.deepEqual(overview.google, { enabled: true, month, details: details0 + 2, search: search0 + 1 });
+  assert.equal(typeof overview.tapsToday, 'number');
+  assert.ok(Array.isArray(overview.batchStock));
+});

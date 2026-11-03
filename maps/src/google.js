@@ -135,7 +135,7 @@ export async function fetchPlaceStats(placeId, apiKey, fetchImpl = fetch) {
 }
 
 // Mengubah link apa pun menjadi tujuan terbaik yang bisa dicapai.
-export async function resolveLink(raw, { apiKey, fetchImpl = fetch } = {}) {
+export async function resolveLink(raw, { apiKey, fetchImpl = fetch, onSearch } = {}) {
   let result = classifyLink(raw);
   if (!result.ok) return result;
 
@@ -154,6 +154,7 @@ export async function resolveLink(raw, { apiKey, fetchImpl = fetch } = {}) {
 
   if (result.kind === 'maps' && result.nameGuess && apiKey) {
     try {
+      await onSearch?.();
       const [first] = await searchPlaces(result.nameGuess, apiKey, fetchImpl);
       if (first) return { ok: true, kind: 'review', url: reviewUrlForPlace(first.placeId), placeId: first.placeId, nameGuess: first.name };
     } catch {

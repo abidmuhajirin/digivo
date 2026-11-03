@@ -139,7 +139,39 @@ button { cursor: pointer; }
 .plan-btn { display: flex; align-items: center; justify-content: center; gap: 6px; min-height: 48px; margin-top: 8px; border-radius: 99px; background: var(--blue); color: #fff; font-weight: 700; text-decoration: none; }
 .plan-btn .i { width: 16px; height: 16px; transform: rotate(180deg); }
 .plan-note { color: var(--ink-2); font-size: 13px; text-align: center; }
-.plan-pro { background: var(--blue); color: #fff; box-shadow: 0 20px 32px -20px #0a3fa066; }
+/* Tab Bulanan/Tahunan menempel di kartu Pro, sama seperti tab Cara kerja/Paket. */
+.ptabs { position: relative; z-index: 1; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); height: 48px; margin-top: 16px; }
+.ptab-ink { --foot: 28px; position: absolute; left: 0; top: 0; bottom: calc(var(--foot) * -1); width: 50%; background: var(--blue); border-radius: 20px 20px 0 0; pointer-events: none; transition: left .42s var(--ease); }
+.ptab-ink::before, .ptab-ink::after { content: ''; position: absolute; bottom: calc(var(--foot) - 1px); width: 21px; height: 21px; }
+.ptab-ink::before { right: calc(100% - 1px); background: radial-gradient(circle at 0 0, #0a6cf500 19.5px, var(--blue) 20px); opacity: 0; transition: opacity .12s; }
+.ptab-ink::after { left: calc(100% - 1px); background: radial-gradient(circle at 100% 0, #0a6cf500 19.5px, var(--blue) 20px); transition: opacity .2s .16s; }
+.ptabs[data-active='tahun'] .ptab-ink { left: 50%; }
+.ptabs[data-active='tahun'] .ptab-ink::before { opacity: 1; transition: opacity .2s .16s; }
+.ptabs[data-active='tahun'] .ptab-ink::after { opacity: 0; transition: opacity .12s; }
+.ptab { position: relative; display: flex; align-items: center; justify-content: center; gap: 6px; border: 0; border-radius: 20px 20px 0 0; background: none; color: var(--ink); font-weight: 700; font-stretch: 112%; font-size: 15px; transition: color .25s; }
+.ptab[aria-selected='true'] { color: #fff; }
+.ptab:focus-visible { outline-color: currentColor; outline-offset: -6px; }
+.ptab-save { padding: 1px 7px; border-radius: 99px; background: var(--yellow); color: var(--ink); font-size: 12px; font-weight: 800; font-stretch: 100%; }
+.pp.enter { animation: panel-in .42s var(--ease) backwards; }
+#pp-bulan.enter { --from: -20px; }
+#pp-tahun.enter { --from: 20px; }
+.plan-pro { margin-top: 0; padding-top: 32px; background: var(--blue); color: #fff; box-shadow: 0 20px 32px -20px #0a3fa066; transition: height .42s var(--ease); }
+.plan-pro.moving { overflow: clip; }
+.price s { margin-left: 6px; color: var(--ink-2); font-size: 14px; }
+.plan-pro .price s { color: #fff; }
+.save-row { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; color: var(--ink-2); font-size: 13px; }
+.plan-pro .save-row { color: #fff; }
+.plan-bundle .save-row { color: var(--ink); }
+.save { padding: 4px 10px; white-space: nowrap; border-radius: 99px; background: #e4eeff; color: var(--blue-deep); font-size: 13px; font-weight: 700; }
+.plan-pro .save { background: var(--yellow); color: var(--ink); }
+.plan-bundle { position: relative; margin-top: 28px; background: var(--yellow); color: var(--ink); box-shadow: 0 20px 32px -22px #8a6a0066; }
+.plan-bundle .plan-icon { background: #fff; color: var(--blue); }
+.plan-bundle .price, .plan-bundle .plan-desc, .plan-bundle .plan-note, .plan-bundle .price s { color: var(--ink); }
+.plan-bundle .save { background: var(--ink); color: var(--yellow); }
+.plan-bundle ul { border-top-color: #1b23413d; }
+.plan-bundle li .i { background: var(--ink); color: var(--yellow); }
+.plan-bundle .plan-btn { background: var(--ink); color: #fff; }
+.best { position: absolute; top: -12px; right: 16px; padding: 4px 12px; border-radius: 99px; background: var(--ink); color: #fff; font-size: 12px; font-weight: 700; white-space: nowrap; }
 .plan-pro .plan-icon { background: #fff; }
 .plan-pro .price, .plan-pro .price b, .plan-pro .plan-desc, .plan-pro .plan-note { color: #fff; }
 .plan-pro ul { border-top-color: #ffffff59; }

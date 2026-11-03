@@ -93,12 +93,22 @@ async function tooMany(c, scope, max, windowMs, key = clientIp(c)) {
   return c.json({ error: 'Terlalu banyak percobaan. Tunggu beberapa menit lalu coba lagi.' }, 429);
 }
 
+// Jatah gratis Google dihitung per bulan, jadi setiap panggilan dicatat untuk peringatan di panel admin.
+const usageMonth = () => new Date().toISOString().slice(0, 7);
+const countGoogleCall = (c, kind) => run(c, `INSERT INTO settings (key, value) VALUES (?, '1')
+  ON CONFLICT(key) DO UPDATE SET value = CAST(value AS INTEGER) + 1`, `google_calls:${usageMonth()}:${kind}`);
+const GOOGLE_KEEP_MS = 30 * DAY;
+
 async function snapshotFromGoogle(c, businessId, placeId) {
   const apiKey = c.env.GOOGLE_PLACES_API_KEY;
   if (!apiKey || !placeId) return false;
   try {
+    await countGoogleCall(c, 'details');
     const { count, rating } = await fetchPlaceStats(placeId, apiKey, c.env.fetchImpl);
     await insertSnapshot(c, businessId, count, rating, 'google');
+    // Ketentuan Google membatasi penyimpanan datanya, jadi angka Google lebih dari 30 hari dibuang.
+    // Angka awal yang diisi saat aktivasi tetap menjadi titik "Sebelum".
+    await run(c, "DELETE FROM review_snapshots WHERE business_id = ? AND source = 'google' AND taken_at < ?", businessId, Date.now() - GOOGLE_KEEP_MS);
     return true;
   } catch (error) {
     console.error('Gagal mengambil jumlah ulasan:', error.message);
@@ -110,7 +120,7 @@ function destination(c, { link, placeId }) {
   if (placeId && /^[\w-]{10,}$/.test(placeId)) {
     return { ok: true, kind: 'review', url: reviewUrlForPlace(placeId), placeId };
   }
-  return resolveLink(link, { apiKey: c.env.GOOGLE_PLACES_API_KEY, fetchImpl: c.env.fetchImpl });
+  return resolveLink(link, { apiKey: c.env.GOOGLE_PLACES_API_KEY, fetchImpl: c.env.fetchImpl, onSearch: () => countGoogleCall(c, 'search') });
 }
 
 function publicBusiness(c, business) {
@@ -147,8 +157,8 @@ async function activateCard(c, card, { name, target, pin, baseline, via }) {
   const businessId = inserted.meta.last_row_id;
   await run(c, 'UPDATE cards SET business_id = ?, activated_at = ?, activated_via = ?, trial_used = 1 WHERE id = ?', businessId, now, via, card.id);
 
-  const tracked = await snapshotFromGoogle(c, businessId, target.placeId);
-  if (!tracked && baseline) await insertSnapshot(c, businessId, baseline.count, baseline.rating, 'manual');
+  if (baseline) await insertSnapshot(c, businessId, baseline.count, baseline.rating, 'manual');
+  await snapshotFromGoogle(c, businessId, target.placeId);
   return { businessId, trial };
 }
 
@@ -416,6 +426,7 @@ export function createApp() {
     if (!c.env.GOOGLE_PLACES_API_KEY) return c.json({ error: 'Pencarian belum aktif. Tempel link Google Maps.' }, 503);
     if (query.length < 3) return c.json({ places: [] });
     try {
+      await countGoogleCall(c, 'search');
       return c.json({ places: await searchPlaces(query, c.env.GOOGLE_PLACES_API_KEY, c.env.fetchImpl) });
     } catch {
       return c.json({ error: 'Pencarian sedang gangguan. Tempel link Google Maps.' }, 502);
@@ -701,7 +712,8 @@ export function createApp() {
     const now = Date.now();
     const since = now - 30 * DAY;
     const query = (sql, ...args) => c.env.DB.prepare(sql).bind(...args);
-    const [totals, resellers, batches, batchStock, businessList] = await c.env.DB.batch([
+    const today = new Date(new Date().toISOString().slice(0, 10)).getTime();
+    const [totals, resellers, batches, batchStock, businessList, usage] = await c.env.DB.batch([
       query(`SELECT
           (SELECT COUNT(*) FROM cards WHERE business_id IS NULL) AS ready,
           (SELECT COUNT(*) FROM cards WHERE business_id IS NOT NULL) AS active,
@@ -709,7 +721,8 @@ export function createApp() {
           (SELECT COUNT(*) FROM businesses WHERE plan = 'pro' AND is_trial = 0 AND is_demo = 0 AND (pro_until IS NULL OR pro_until > ?1)) AS pro,
           (SELECT COUNT(*) FROM businesses WHERE plan = 'pro' AND is_trial = 1 AND is_demo = 0 AND pro_until > ?1) AS trials,
           (SELECT COUNT(*) FROM events WHERE type = 'tap' AND ts >= ?2) AS taps30,
-          (SELECT value FROM settings WHERE key = 'default_url') AS defaultUrl`, now, since),
+          (SELECT value FROM settings WHERE key = 'default_url') AS defaultUrl,
+          (SELECT COUNT(*) FROM events WHERE type = 'tap' AND ts >= ?3) AS tapsToday`, now, since, today),
       query(`SELECT r.id, r.name, r.whatsapp, r.city, r.active, r.created_at AS createdAt,
           (SELECT COUNT(*) FROM cards k WHERE k.reseller_id = r.id AND k.business_id IS NULL) AS stock,
           (SELECT COUNT(*) FROM cards k WHERE k.reseller_id = r.id AND k.business_id IS NOT NULL) AS sold
@@ -725,13 +738,16 @@ export function createApp() {
           (SELECT r.name FROM cards c JOIN resellers r ON r.id = c.reseller_id WHERE c.business_id = b.id LIMIT 1) AS seller,
           (SELECT COUNT(*) FROM events e WHERE e.business_id = b.id AND e.type = 'tap' AND e.ts >= ?) AS taps30
         FROM businesses b ORDER BY b.created_at DESC LIMIT 500`, since),
+      query('SELECT key, value FROM settings WHERE key LIKE ?', `google_calls:${usageMonth()}:%`),
     ]);
+    const calls = Object.fromEntries(usage.results.map((row) => [row.key.split(':').at(-1), Number(row.value)]));
     return c.json({
       ...totals.results[0],
       resellers: resellers.results,
       batches: batches.results,
       batchStock: batchStock.results,
       businessList: businessList.results,
+      google: { enabled: Boolean(c.env.GOOGLE_PLACES_API_KEY), month: usageMonth(), details: calls.details ?? 0, search: calls.search ?? 0 },
     });
   });
 

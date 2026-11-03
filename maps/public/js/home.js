@@ -77,6 +77,57 @@ slides.forEach((item, i) => { item.inert = i !== 0; });
 document.getElementById('insight-prev').addEventListener('click', () => turnInsight(-1));
 document.getElementById('insight-next').addEventListener('click', () => turnInsight(1));
 
+// Tab Bulanan/Tahunan di kartu Pro: tinggi kartu ikut berubah halus, tombol pesan mengikuti pilihan.
+const planTabs = document.querySelector('.ptabs');
+const planTabList = [...planTabs.querySelectorAll('[role=tab]')];
+const proCard = document.querySelector('.plan-pro');
+const proOrder = document.getElementById('pro-order');
+const PRO_TEXT = { bulan: 'Halo, saya mau langganan Pro bulanan kartu ulasan.', tahun: 'Halo, saya mau langganan Pro tahunan kartu ulasan.' };
+let proTimer;
+
+function releasePro() {
+  clearTimeout(proTimer);
+  proCard.classList.remove('moving');
+  proCard.style.height = '';
+}
+
+function showPlan(name) {
+  if (planTabs.dataset.active === name) return;
+  const from = proCard.offsetHeight;
+  planTabs.dataset.active = name;
+  planTabList.forEach((tab) => {
+    const active = tab.id === `ptab-${name}`;
+    const panel = document.getElementById(tab.getAttribute('aria-controls'));
+    tab.setAttribute('aria-selected', active);
+    tab.tabIndex = active ? 0 : -1;
+    panel.hidden = !active;
+    panel.classList.toggle('enter', active);
+  });
+  proOrder.dataset.waLink = PRO_TEXT[name];
+  if (number) proOrder.href = waUrl(number, PRO_TEXT[name]);
+  releasePro();
+  const to = proCard.offsetHeight;
+  if (calm.matches || from === to) return;
+  proCard.style.height = `${from}px`;
+  proCard.classList.add('moving');
+  void proCard.offsetHeight;
+  proCard.style.height = `${to}px`;
+  proTimer = setTimeout(releasePro, 600);
+}
+
+proCard.addEventListener('transitionend', (event) => {
+  if (event.target === proCard && event.propertyName === 'height') releasePro();
+});
+planTabList.forEach((tab, i) => {
+  tab.addEventListener('click', () => showPlan(tab.id.slice(5)));
+  tab.addEventListener('keydown', (event) => {
+    if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return;
+    const next = planTabList[(i + 1) % planTabList.length];
+    showPlan(next.id.slice(5));
+    next.focus();
+  });
+});
+
 const joinDialog = document.getElementById('join-dialog');
 const joinForm = document.getElementById('join-form');
 const joinOpen = document.getElementById('join-open');

@@ -82,7 +82,7 @@
       <h2>Pilih paket</h2>
       <article class="plan">
         <div class="plan-top"><span class="plan-icon"><svg class="i" aria-hidden="true"><use href="/icons.svg#card"/></svg></span><h3>Basic</h3></div>
-        <p class="price"><b>Rp99.000</b> / kartu, sekali bayar</p>
+        <p class="price"><b>Rp50.000</b> / kartu, sekali bayar</p>
         <p class="plan-desc">Untuk usaha yang ingin kartu ulasan langsung jalan.</p>
         <ul>
           <li><svg class="i" aria-hidden="true"><use href="/icons.svg#check"/></svg>Akrilik 10 x 10 cm, NFC dan QR dalam satu kartu</li>
@@ -94,9 +94,21 @@
         <a class="plan-btn" data-wa-link="Halo, saya mau pesan kartu ulasan paket Basic." href="/kelola">Pesan via WhatsApp<svg class="i" aria-hidden="true"><use href="/icons.svg#back"/></svg></a>
         <p class="plan-note">Tanpa biaya bulanan</p>
       </article>
+      <div class="ptabs" role="tablist" aria-label="Lama langganan Pro" data-active="bulan">
+        <span class="ptab-ink" aria-hidden="true"></span>
+        <button class="ptab" id="ptab-bulan" role="tab" aria-controls="pp-bulan" aria-selected="true">Bulanan</button>
+        <button class="ptab" id="ptab-tahun" role="tab" aria-controls="pp-tahun" aria-selected="false" tabindex="-1">Tahunan <span class="ptab-save">-15%</span></button>
+      </div>
       <article class="plan plan-pro">
         <div class="plan-top"><span class="plan-icon"><svg class="i" aria-hidden="true"><use href="/icons.svg#tap"/></svg></span><h3>Pro</h3></div>
-        <p class="price"><b>Rp49.000</b> / bulan</p>
+        <div id="pp-bulan" class="pp" role="tabpanel" aria-labelledby="ptab-bulan">
+          <p class="price"><b>Rp49.000</b> / bulan</p>
+          <p class="save-row"><span class="save">Coba gratis 7 hari</span> saat aktivasi</p>
+        </div>
+        <div id="pp-tahun" class="pp" role="tabpanel" aria-labelledby="ptab-tahun" hidden>
+          <p class="price"><b>Rp499.000</b> / tahun <s>Rp588.000</s></p>
+          <p class="save-row"><span class="save">Hemat Rp89.000</span> setara Rp41.600 per bulan</p>
+        </div>
         <p class="plan-desc">Untuk usaha yang ingin memantau hasil setiap kartu.</p>
         <ul>
           <li><svg class="i" aria-hidden="true"><use href="/icons.svg#check"/></svg>Semua fitur Basic</li>
@@ -105,8 +117,21 @@
           <li><svg class="i" aria-hidden="true"><use href="/icons.svg#check"/></svg>Jam ramai, NFC vs QR, data 30 hari</li>
           <li><svg class="i" aria-hidden="true"><use href="/icons.svg#check"/></svg>Minipage: ulasan, WhatsApp, menu, Instagram</li>
         </ul>
-        <a class="plan-btn" data-wa-link="Halo, saya mau tanya paket Pro kartu ulasan." href="/kelola">Tanya paket Pro<svg class="i" aria-hidden="true"><use href="/icons.svg#back"/></svg></a>
-        <p class="plan-note">Coba gratis 7 hari saat aktivasi</p>
+        <a class="plan-btn" id="pro-order" data-wa-link="Halo, saya mau langganan Pro bulanan kartu ulasan." href="/kelola">Langganan Pro<svg class="i" aria-hidden="true"><use href="/icons.svg#back"/></svg></a>
+      </article>
+      <article class="plan plan-bundle">
+        <div class="plan-top"><span class="plan-icon"><svg class="i" aria-hidden="true"><use href="/icons.svg#card"/></svg></span><h3>Kartu + Pro tahunan</h3></div>
+        <span class="best">Paling hemat</span>
+        <p class="price"><b>Rp529.000</b> / paket <s>Rp549.000</s></p>
+        <p class="save-row"><span class="save">Hemat Rp20.000</span> dibanding beli terpisah</p>
+        <p class="plan-desc">Untuk usaha baru yang ingin langsung memantau hasil kartu.</p>
+        <ul>
+          <li><svg class="i" aria-hidden="true"><use href="/icons.svg#check"/></svg>Kartu akrilik 10 x 10 cm, NFC dan QR</li>
+          <li><svg class="i" aria-hidden="true"><use href="/icons.svg#check"/></svg>Pro aktif 12 bulan</li>
+          <li><svg class="i" aria-hidden="true"><use href="/icons.svg#check"/></svg>Semua fitur Pro sejak hari pertama</li>
+        </ul>
+        <a class="plan-btn" data-wa-link="Halo, saya mau pesan bundling Kartu + Pro tahunan." href="/kelola">Pesan bundling<svg class="i" aria-hidden="true"><use href="/icons.svg#back"/></svg></a>
+        <p class="plan-note">Kartu Rp50.000 + Pro tahunan Rp499.000</p>
       </article>
     </section>
   </div>

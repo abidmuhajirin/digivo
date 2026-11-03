@@ -85,8 +85,44 @@ function jualView() {
     </section>`;
 }
 
+const fmt = (n) => n.toLocaleString('id-ID');
+const GOOGLE_FREE = { details: 1000, search: 5000 };
+const CLOUDFLARE_FREE = 100_000;
+const share = (used, free) => Math.min(100, Math.round((used / free) * 100));
+
+function usageWarnings() {
+  const { google, tapsToday } = overview;
+  const notes = [];
+  for (const [kind, label] of [['details', 'rating dan ulasan'], ['search', 'cari nama bisnis']]) {
+    const pct = share(google[kind], GOOGLE_FREE[kind]);
+    if (pct >= 80) notes.push(`Jatah gratis Google untuk ${label} sudah terpakai ${pct}% bulan ini.`);
+  }
+  if (share(tapsToday, CLOUDFLARE_FREE) >= 80) notes.push(`Tap hari ini sudah ${share(tapsToday, CLOUDFLARE_FREE)}% dari batas harian Cloudflare.`);
+  return notes.map((text) => `<p class="note warn">${icon('lock')}<span>${esc(text)}</span></p>`).join('');
+}
+
+function usageRow(label, used, free) {
+  const pct = share(used, free);
+  return `<div class="usage-row${pct >= 80 ? ' hot' : ''}"><span>${label}</span><b>${fmt(used)} / ${fmt(free)}</b>
+    <span class="usage-bar" role="img" aria-label="${label}: ${pct} persen terpakai"><i data-w="${pct}"></i></span></div>`;
+}
+
+function usagePanel() {
+  const { google, tapsToday } = overview;
+  return `<section class="panel">
+    <h2>Pemakaian bulan ini</h2>
+    ${google.enabled ? '' : '<p class="note warn">API key Google belum dipasang. Rating dan jumlah ulasan masih diisi manual.</p>'}
+    ${usageRow('Rating dan ulasan Google', google.details, GOOGLE_FREE.details)}
+    ${usageRow('Cari nama bisnis', google.search, GOOGLE_FREE.search)}
+    <p class="muted">Jatah gratis Google per bulan. Lewat dari itu, Google menagih kartu billing. Email peringatan diatur di Budgets & alerts Google Cloud.</p>
+    ${usageRow('Tap kartu hari ini', tapsToday, CLOUDFLARE_FREE)}
+    <p class="muted">Batas gratis Cloudflare 100.000 permintaan per hari. Paket gratis tidak menagih, situs hanya berhenti sampai hari berganti.</p>
+  </section>`;
+}
+
 function kartuView() {
   return `
+    ${usagePanel()}
     <section class="panel">
       <h2>Tujuan kartu belum terjual</h2>
       <p class="muted">${overview.defaultUrl ? 'Kartu kosong membuka link ini, cocok untuk demo.' : 'Belum diatur, jadi kartu kosong membuka halaman aktivasi.'}</p>
@@ -335,7 +371,8 @@ function render() {
   const views = { jual: jualView, kartu: kartuView, reseller: resellerView, bisnis: bisnisView };
   root.innerHTML = `
     <div class="topbar page-top"><h1>${TITLES[tab]}</h1><button class="btn btn-small" id="logout">Keluar</button></div>
-    ${views[tab]()}`;
+    ${usageWarnings()}${views[tab]()}`;
+  root.querySelectorAll('[data-w]').forEach((bar) => { bar.style.width = `${bar.dataset.w}%`; });
   ({ jual: bindJual, kartu: bindKartu, reseller: bindReseller, bisnis: bindBisnis })[tab]();
   document.getElementById('logout').addEventListener('click', async () => {
     await api('/api/admin/logout', { method: 'POST' });
