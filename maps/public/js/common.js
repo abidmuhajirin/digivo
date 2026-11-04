@@ -67,7 +67,7 @@ const SEAL_D = `M${Array.from({ length: 120 }, (_, i) => {
   const r = 10.4 + 1.2 * Math.cos(8 * a);
   return `${(12 + r * Math.sin(a)).toFixed(2)} ${(12 - r * Math.cos(a)).toFixed(2)}`;
 }).join('L')}Z`;
-const SEAL_TONE = { pro: ['#0a6cf5', '#ffffff'], basic: ['#ffd93b', '#1b2341'], trial: ['#e5342b', '#ffffff'] };
+const SEAL_TONE = { pro: ['#0a6cf5', '#ffffff'], basic: ['#ffd93b', '#1b2341'], trial: ['#e5342b', '#ffffff'], verified: ['#16a34a', '#ffffff'] };
 export const seal = (tier) => `<svg class="seal" viewBox="0 0 24 24" aria-hidden="true"><path fill="${SEAL_TONE[tier][0]}" d="${SEAL_D}"/><path fill="none" stroke="${SEAL_TONE[tier][1]}" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" d="M7.6 12.3l3 3 5.8-6.2"/></svg>`;
 
 // Konfirmasi di tengah layar dengan gaya aplikasi, pengganti confirm() bawaan browser.

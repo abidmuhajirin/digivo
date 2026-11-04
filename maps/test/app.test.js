@@ -320,6 +320,12 @@ test('fitur Pro terkunci di server, minipage tidak pernah menyaring pelanggan', 
   const stats = await (await call('/api/stats', { cookie })).json();
   assert.equal(stats.reviewClicks, 1);
   assert.equal(stats.hours.length, 24);
+  // Tap tadi tercatat di hari dan jam WIB yang sama di tabel per hari.
+  const wib = new Date(Date.now() + 7 * 3_600_000);
+  assert.equal(stats.hourGrid.length, 7);
+  assert.ok(stats.hourGrid[wib.getUTCDay()][wib.getUTCHours()] >= 1);
+  assert.equal(stats.hourGrid.flat().reduce((sum, n) => sum + n, 0), stats.hours.reduce((sum, n) => sum + n, 0));
+  assert.match(html, /Kasih Kami Kritik dan Saran/);
 });
 
 test('banyak kartu satu bisnis, reset kartu terakhir menghapus bisnis', async () => {
@@ -524,4 +530,16 @@ test('panggilan Google tercatat, angka awal manual tetap, data Google lama dibua
   assert.deepEqual(overview.google, { enabled: true, month, details: details0 + 2, search: search0 + 1 });
   assert.equal(typeof overview.tapsToday, 'number');
   assert.ok(Array.isArray(overview.batchStock));
+});
+
+test('permintaan ubah data dari situs lain ditolak', async () => {
+  const send = (headers) => app.fetch(new Request('http://test/api/admin/login', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'cf-connecting-ip': '10.9.9.9', ...headers },
+    body: JSON.stringify({ password: 'sandi-uji' }),
+  }), env);
+  assert.equal((await send({ Origin: 'https://jahat.example' })).status, 403);
+  assert.equal((await send({ 'Sec-Fetch-Site': 'cross-site' })).status, 403);
+  // Dari situs sendiri lolos penjaga (bisa 200 atau 429 karena batas percobaan tes sebelumnya).
+  assert.notEqual((await send({ Origin: 'http://test', 'Sec-Fetch-Site': 'same-origin' })).status, 403);
 });

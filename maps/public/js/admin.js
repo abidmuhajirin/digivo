@@ -10,6 +10,8 @@ let overview;
 let loadedAt = 0;
 let searchQuery = '';
 let result = '';
+// Reseller yang dituju dari tab Bisnis, disorot setelah tab Reseller tampil.
+let focusReseller = null;
 
 const currentTab = () => (TABS.includes(location.hash.slice(1)) ? location.hash.slice(1) : 'jual');
 const displayWa = (number) => number.replace(/^62/, '0');
@@ -54,7 +56,9 @@ function businessRows(filter = '') {
       <div class="lcard-body">
         <p>${esc(planDetail(b))}</p>
         <p>${b.cards} kartu · ${b.taps30} tap 30 hari${b.linkLocked ? ' · link terkunci' : ''}</p>
-        <p>${b.seller ? `Reseller: ${esc(b.seller)}` : 'Penjualan pusat'}</p>
+        <p class="seller-line">${b.sellerId
+          ? `${icon('user')}<button type="button" class="seller-link" data-goto-reseller="${b.sellerId}">Reseller: ${esc(b.seller)}</button>`
+          : `${icon('store')}<span>Penjualan pusat</span>`}</p>
         ${codes.length ? `<div class="code-chips">${codes.map((code) => codeChip(code)).join('')}</div>` : ''}
       </div>
       <details class="lcard-more">
@@ -153,16 +157,10 @@ function kartuView() {
         <p class="form-msg" role="alert"></p>
         <button class="btn btn-light" type="submit">Buat batch</button>
       </form>
-      ${overview.batches.map((b) => `
-        <article class="admin-row">
-          <div>Batch #${b.id}${b.note ? ` · ${esc(b.note)}` : ''}
-            <small>${formatDate(b.createdAt)} · ${b.activated} dari ${b.qty} aktif</small></div>
-          <div class="admin-actions">
-            <a class="btn btn-small" href="/admin/cetak/${b.id}" target="_blank">QR dan kode</a>
-            <a class="btn btn-small" href="/admin/batch/${b.id}.csv">CSV vendor</a>
-          </div>
-        </article>`).join('') || '<p class="muted">Belum ada batch.</p>'}
     </section>
+
+    <h2 class="list-title">Daftar batch</h2>
+    <div class="lcards">${batchRows()}</div>
 
     <section class="panel">
       <details class="drawer">
@@ -177,10 +175,37 @@ function kartuView() {
     </section>`;
 }
 
+function batchRows() {
+  if (!overview.batches.length) return '<p class="muted list-empty">Belum ada batch.</p>';
+  return overview.batches.map((b) => {
+    const rows = overview.batchStock.filter((row) => row.batchId === b.id);
+    const stock = rows.reduce((sum, row) => sum + row.n, 0);
+    const holders = rows.map((row) => `${row.resellerId ? esc(resellerName(row.resellerId)) : 'Pusat'} ${row.n}`).join(' · ');
+    return `
+    <article class="lcard">
+      <div class="lcard-head">
+        <div class="lcard-title"><h3>Batch #${b.id}</h3><small>${b.note ? `${esc(b.note)} · ` : ''}${formatDate(b.createdAt)}</small></div>
+        <span class="seal-tile seal-stock"><b>${stock}</b><span>stok</span></span>
+      </div>
+      <div class="lcard-body">
+        <p>Stok ${stock} · Aktif ${b.activated} dari ${b.qty} kartu</p>
+        <p>${stock ? `Dipegang: ${holders}` : 'Stok habis, semua kartu sudah aktif.'}</p>
+      </div>
+      <details class="lcard-more">
+        <summary>Cetak dan unduh${icon('back')}</summary>
+        <div class="lcard-drawer admin-actions">
+          <a class="btn btn-small" href="/admin/cetak/${b.id}" target="_blank" rel="noopener">QR dan kode</a>
+          <a class="btn btn-small" href="/admin/batch/${b.id}.csv">CSV vendor</a>
+        </div>
+      </details>
+    </article>`;
+  }).join('');
+}
+
 function resellerRows() {
   if (!overview.resellers.length) return '<p class="muted list-empty">Belum ada reseller.</p>';
   return overview.resellers.map((r) => `
-    <article class="lcard">
+    <article class="lcard" data-reseller-card="${r.id}">
       <div class="lcard-head">
         <div class="lcard-title"><h3>${esc(r.name)}</h3>${r.active ? '<small>Aktif</small>' : '<small class="off">Nonaktif</small>'}</div>
         <span class="seal-tile seal-stock"><b>${r.stock}</b><span>stok</span></span>
@@ -394,6 +419,14 @@ function render() {
     ${usageWarnings()}${views[tab]()}`;
   root.querySelectorAll('[data-w]').forEach((bar) => { bar.style.width = `${bar.dataset.w}%`; });
   ({ jual: bindJual, kartu: bindKartu, reseller: bindReseller, bisnis: bindBisnis })[tab]();
+  if (tab === 'reseller' && focusReseller) {
+    const card = root.querySelector(`[data-reseller-card="${focusReseller}"]`);
+    focusReseller = null;
+    if (card) requestAnimationFrame(() => {
+      card.scrollIntoView({ block: 'center', behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
+      card.classList.add('spot');
+    });
+  }
   document.getElementById('logout')?.addEventListener('click', async () => {
     await api('/api/admin/logout', { method: 'POST' });
     location.reload();
@@ -403,6 +436,11 @@ function render() {
 root.addEventListener('click', (event) => {
   const chip = event.target.closest('[data-copy]');
   if (chip) copyCode(chip.dataset.copy);
+  const seller = event.target.closest('[data-goto-reseller]');
+  if (seller) {
+    focusReseller = seller.dataset.gotoReseller;
+    location.hash = 'reseller';
+  }
 });
 
 async function refresh() {
@@ -426,7 +464,7 @@ dock.addEventListener('click', (event) => {
 // Pindah menu langsung memakai data yang sudah ada, lalu data terbaru diambil di belakang.
 addEventListener('hashchange', () => {
   result = '';
-  scrollTo({ top: 0 });
+  if (!focusReseller) scrollTo({ top: 0 });
   if (!overview) return;
   render();
   if (Date.now() - loadedAt < 2000) return;

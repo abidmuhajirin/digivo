@@ -1,4 +1,4 @@
-import { api, bindForm, esc, formatDate, icon, moveDock, toast, waUrl } from '/js/common.js';
+import { api, bindForm, esc, formatDate, icon, moveDock, seal, toast, waUrl } from '/js/common.js';
 
 const view = document.getElementById('view');
 const dock = document.querySelector('.dock');
@@ -6,11 +6,16 @@ const brand = document.body.dataset.brand;
 const TABS = ['beranda', 'masukan', 'kartu', 'atur'];
 const TONES = { beranda: 'yellow', masukan: 'blue', kartu: 'green', atur: 'red' };
 const DAY_NAMES = ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'];
+// Urutan tombol hari sama dengan Jam pengunjung di halaman depan. Angka pertama = getUTCDay().
+const WEEK = [[1, 'Sen', 'Senin'], [2, 'Sel', 'Selasa'], [3, 'Rab', 'Rabu'], [4, 'Kam', 'Kamis'], [5, 'Jum', 'Jumat'], [6, 'Sab', 'Sabtu'], [0, 'Ahad', 'Ahad']];
+const STAR = '<svg viewBox="0 0 24 24" aria-hidden="true"><use href="/icons.svg#gstar"/></svg>';
 
 let me;
 let stats;
 let loadedAt = 0;
 let inboxCache = null;
+// Hari yang dipilih di Jam ramai, awalnya hari ini (WIB).
+let hourDay = new Date(Date.now() + 7 * 3_600_000).getUTCDay();
 
 const isPro = () => me.business.plan === 'pro';
 const trialDaysLeft = () => Math.max(1, Math.ceil((me.business.proUntil - Date.now()) / 86_400_000));
@@ -32,13 +37,45 @@ function capsules(week) {
     </div>`).join('')}</div>`;
 }
 
-function hoursChart(hours) {
-  const peak = Math.max(1, ...hours);
-  const top = hours.indexOf(Math.max(...hours));
+function planChip() {
+  if (me.business.isTrial) return '<span class="plan-chip trial">Trial Pro</span>';
+  if (isPro()) return `<span class="plan-chip pro">${seal('verified')}Pro</span>`;
+  return '<span class="plan-chip basic">Basic</span>';
+}
+
+// Sama dengan Jam pengunjung di halaman depan: pilih hari, tiga jam teramai diwarnai.
+function hoursChart() {
   return `
-    <p class="muted">Paling ramai sekitar pukul ${String(top).padStart(2, '0')}.00 WIB. Taruh kartu di tempat yang terlihat pada jam ini.</p>
-    <div class="hours" role="img" aria-label="Sebaran tap per jam">${hours.map((n) => `<i data-h="${Math.round((n / peak) * 100)}"></i>`).join('')}</div>
-    <div class="hours-axis"><span>00</span><span>06</span><span>12</span><span>18</span><span>23</span></div>`;
+    <div class="visit-days" role="group" aria-label="Pilih hari">${WEEK.map(([day, short, long]) =>
+      `<button type="button" data-day="${day}" aria-label="${long}" aria-pressed="${day === hourDay}">${short}</button>`).join('')}</div>
+    <div class="hours" id="hours" role="img">${'<i></i>'.repeat(24)}</div>
+    <div class="hours-axis"><span>00</span><span>06</span><span>12</span><span>18</span><span>23</span></div>
+    <p class="visit-note" aria-live="polite"><i></i><span></span></p>`;
+}
+
+const clock = (hour) => `${String(hour).padStart(2, '0')}.00`;
+
+function showHours() {
+  const chart = document.getElementById('hours');
+  if (!chart) return;
+  const counts = stats.hourGrid?.[hourDay] ?? Array(24).fill(0);
+  const total = counts.reduce((sum, n) => sum + n, 0);
+  const top = Math.max(1, ...counts);
+  let peak = 0;
+  for (let i = 1; i <= 21; i += 1) {
+    if (counts[i] + counts[i + 1] + counts[i + 2] > counts[peak] + counts[peak + 1] + counts[peak + 2]) peak = i;
+  }
+  [...chart.children].forEach((bar, i) => {
+    bar.style.height = `${Math.round((counts[i] / top) * 100)}%`;
+    bar.classList.toggle('hot', total > 0 && i >= peak && i < peak + 3);
+  });
+  const name = WEEK.find(([day]) => day === hourDay)[2];
+  const text = total ? `Paling ramai pukul ${clock(peak)}-${clock(peak + 2)}` : 'Belum ada tap di hari ini';
+  chart.setAttribute('aria-label', `${name}, ${text.toLowerCase()}`);
+  const note = chart.parentElement.querySelector('.visit-note');
+  note.classList.toggle('empty', !total);
+  note.querySelector('span').textContent = text;
+  chart.parentElement.querySelectorAll('.visit-days button').forEach((button) => button.setAttribute('aria-pressed', Number(button.dataset.day) === hourDay));
 }
 
 function trialPanel() {
@@ -72,6 +109,31 @@ function beforeAfterPanel() {
 
 const formatRating = (rating) => rating.toFixed(1).replace('.', ',');
 
+// Bintang dibulatkan ke setengah terdekat seperti di Google Maps: kuning, setengah, atau abu-abu.
+function googleStars(rating) {
+  const rounded = Math.round(rating * 2) / 2;
+  return Array.from({ length: 5 }, (_, i) => {
+    const kind = rounded >= i + 1 ? 'full' : rounded >= i + 0.5 ? 'half' : 'empty';
+    return `<span class="gstar ${kind}">${STAR}${kind === 'half' ? `<span class="gstar-half">${STAR}</span>` : ''}</span>`;
+  }).join('');
+}
+
+// Google tidak membagikan jumlah per bintang, jadi panjang batang diperkirakan dari rating rata-rata.
+function ratingSpread(rating) {
+  const target = Math.min(5, Math.max(1, rating));
+  const weights = (t) => [5, 4, 3, 2, 1].map((star) => Math.exp(t * star));
+  const mean = (t) => weights(t).reduce((sum, w, i) => sum + w * (5 - i), 0) / weights(t).reduce((sum, w) => sum + w, 0);
+  let low = -12;
+  let high = 12;
+  for (let i = 0; i < 40; i += 1) {
+    const mid = (low + high) / 2;
+    if (mean(mid) < target) low = mid; else high = mid;
+  }
+  const list = weights(low);
+  const top = Math.max(...list);
+  return list.map((w) => Math.max(4, Math.round((w / top) * 100)));
+}
+
 function reviewForm(hasData) {
   return `
     <form id="review-form" class="stack-sm">
@@ -88,7 +150,7 @@ function reviewsPanel() {
   const { business } = me;
   const data = stats.reviews;
   const form = business.reviewTracking ? '' : data
-    ? `<details class="drawer"><summary>Perbarui angka</summary><p class="muted">Salin angka dari profil bisnis di Google Maps.</p>${reviewForm(true)}</details>`
+    ? `<details class="drawer"><summary>Perbarui angka (manual)</summary><p class="muted">Salin angka dari profil bisnis di Google Maps.</p>${reviewForm(true)}</details>`
     : `<p class="muted">Salin rating dan jumlah ulasan dari profil bisnis di Google Maps.</p>${reviewForm(false)}`;
   const head = '<div class="review-head"><svg viewBox="0 0 48 48" aria-hidden="true"><use href="/icons.svg#google-g"/></svg><h2>Ulasan Google</h2></div>';
   if (!data) {
@@ -98,12 +160,23 @@ function reviewsPanel() {
       ${form}
     </section>`;
   }
+  const count = `${data.count.toLocaleString('id-ID')} ulasan`;
   return `<section class="folder score-card">
       ${head}
       ${data.rating ? `
-      <b class="review-score">${formatRating(data.rating)}</b>
-      <span class="star-track" role="img" aria-label="Rating ${formatRating(data.rating)} dari 5"><svg viewBox="0 0 120 22" aria-hidden="true"><use href="/icons.svg#stars5"/></svg><span class="star-fill" data-w="${Math.round((data.rating / 5) * 100)}"><svg viewBox="0 0 120 22" aria-hidden="true"><use href="/icons.svg#stars5"/></svg></span></span>` : ''}
-      <p class="review-count${data.rating ? '' : ' review-count-only'}">${data.count.toLocaleString('id-ID')} ulasan</p>
+      <div class="score-grid">
+        <div class="spread">
+          <h3>Ringkasan Ulasan</h3>
+          <ol class="spread-bars" aria-label="Perkiraan sebaran bintang dari rating rata-rata">${ratingSpread(data.rating).map((w, i) =>
+            `<li><span>${5 - i}</span><i><b data-w="${w}"></b></i></li>`).join('')}</ol>
+          <small>Perkiraan dari rating</small>
+        </div>
+        <div class="score-main">
+          <b class="review-score">${formatRating(data.rating)}</b>
+          <span class="gstars" role="img" aria-label="Rating ${formatRating(data.rating)} dari 5">${googleStars(data.rating)}</span>
+          <p class="review-count">${count}</p>
+        </div>
+      </div>` : `<p class="review-count review-count-only">${count}</p>`}
       <p class="score-source">${data.source === 'google' ? 'Otomatis dari Google' : 'Diisi manual'}, ${formatDate(data.at)}</p>
     </section>
     ${form ? `<section class="panel">${form}</section>` : ''}`;
@@ -118,15 +191,15 @@ function renderBeranda() {
   view.innerHTML = `
     <div class="greet">
       <span class="business-name">${esc(business.name)}</span>
-      <span class="plan-chip ${pro ? 'pro' : ''}">${business.isTrial ? 'Trial Pro' : pro ? 'Pro' : 'Basic'}</span>
+      ${planChip()}
     </div>
 
     <main class="wrap app-main stack">
       ${reviewsPanel()}
 
       <div class="folders">
-        <a class="folder folder-link f-green" href="${esc(waUrl('', `Terima kasih sudah berkunjung ke ${business.name}. Bantu kami dengan memberi ulasan: ${firstCardUrl()}`))}" target="_blank" rel="noopener"><span>Kirim WA</span>${icon('share')}</a>
-        <button class="folder folder-link f-red" id="copy-link"><span>Salin link</span>${icon('copy')}</button>
+        <a class="folder folder-link f-wa" href="${esc(waUrl('', `Terima kasih sudah berkunjung ke ${business.name}. Bantu kami dengan memberi ulasan: ${firstCardUrl()}`))}" target="_blank" rel="noopener"><span>Kirim WA</span>${icon('whatsapp')}</a>
+        <button class="folder folder-link f-yellow" id="copy-link"><span>Salin link</span>${icon('copy')}</button>
         <a class="folder folder-link f-blue" href="${esc(business.reviewUrl)}" target="_blank" rel="noopener"><span>Uji tujuan</span>${icon('open')}</a>
       </div>
 
@@ -147,12 +220,12 @@ function renderBeranda() {
         <div class="split">
           <div><span class="num">${stats.monthTaps}</span><small>Tap kartu</small></div>
           <div><span class="num">${clicks}</span><small>Lanjut ke Google</small></div>
-          <div><span class="num">${sources.nfc ?? 0}</span><small>Lewat NFC</small></div>
-          <div><span class="num">${sources.qr ?? 0}</span><small>Lewat QR</small></div>
+          <div class="stat-ico">${icon('nfc')}<span class="num">${sources.nfc ?? 0}</span><small>Lewat NFC</small></div>
+          <div class="stat-ico">${icon('qr')}<span class="num">${sources.qr ?? 0}</span><small>Lewat QR</small></div>
         </div>
         ${business.mode === 'page' ? '' : '<p class="muted">"Lanjut ke Google" hanya terhitung saat Minipage aktif.</p>'}
       </section>
-      <section class="panel"><h2>Jam ramai</h2>${stats.monthTaps ? hoursChart(stats.hours) : '<p class="muted">Muncul setelah ada tap pertama.</p>'}</section>
+      <section class="panel"><div class="visits-head"><h2>Jam ramai</h2><small>30 hari terakhir</small></div>${stats.monthTaps ? hoursChart() : '<p class="muted">Muncul setelah ada tap pertama.</p>'}</section>
       <section class="panel">
         <h2>Kartu paling aktif</h2>
         <ul class="list">${stats.perCard.map((card, i) => `
@@ -165,6 +238,13 @@ function renderBeranda() {
 
   view.querySelectorAll('[data-w]').forEach((node) => { node.style.width = `${node.dataset.w}%`; });
   view.querySelectorAll('[data-h]').forEach((node) => { node.style.height = `${node.dataset.h}%`; });
+  showHours();
+  view.querySelector('.visit-days')?.addEventListener('click', (event) => {
+    const button = event.target.closest('button');
+    if (!button) return;
+    hourDay = Number(button.dataset.day);
+    showHours();
+  });
   const reviewsForm = document.getElementById('review-form');
   if (reviewsForm) bindForm(reviewsForm, async (values) => {
     await api('/api/reviews', { method: 'POST', body: values });
@@ -322,7 +402,7 @@ function renderAtur() {
       </section>
 
       <section class="panel stack-sm">
-        <div class="panel-head"><h2>Paket</h2><span class="plan-chip ${pro ? 'pro' : ''}">${business.isTrial ? 'Trial Pro' : pro ? 'Pro' : 'Basic'}</span></div>
+        <div class="panel-head"><h2>Paket</h2>${planChip()}</div>
         ${pro && business.proUntil ? `<p class="muted">${business.isTrial ? 'Trial berakhir' : 'Aktif sampai'} ${formatDate(business.proUntil)}.</p>` : ''}
         ${pro && me.adminWa ? `<a class="btn btn-small" href="${esc(waUrl(me.adminWa, `Halo, saya mau perpanjang Pro untuk ${business.name}.`))}" target="_blank" rel="noopener">Perpanjang via WhatsApp</a>` : ''}
         ${pro ? '' : '<p class="muted">Basic tidak ada biaya bulanan.</p>'}

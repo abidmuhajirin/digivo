@@ -61,7 +61,9 @@ for (let daysAgo = 29; daysAgo >= 0; daysAgo--) {
     const hour = hourPool[Math.floor(random() * hourPool.length)];
     const day = new Date(now - daysAgo * DAY);
     day.setUTCHours(hour - 7, Math.floor(random() * 60));
-    const ts = Math.min(day.getTime(), now - 60_000);
+    const ts = day.getTime();
+    // Jam yang belum lewat hari ini dilewati, supaya tap tidak menumpuk di jam sekarang.
+    if (ts > now - 60_000) continue;
     const code = ownerCards[random() < 0.55 ? 0 : random() < 0.7 ? 1 : 2];
     const source = random() < 0.68 ? 'nfc' : 'qr';
     const card = `(SELECT id FROM cards WHERE code = ${quote(code)})`;

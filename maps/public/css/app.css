@@ -69,6 +69,12 @@
 .lcard-more > summary .i { color: var(--ink-2); transform: rotate(180deg); transition: transform .2s var(--ease); }
 .lcard-more[open] > summary .i { transform: rotate(270deg); }
 .lcard-drawer { padding: 0 16px 16px; }
+.seller-line { display: flex; align-items: center; gap: 6px; }
+.seller-line .i { width: 18px; height: 18px; color: var(--ink-2); }
+.seller-link { padding: 4px 0; border: 0; background: none; color: var(--blue); font-weight: 600; text-align: left; text-decoration: underline; text-underline-offset: 3px; }
+/* Reseller tujuan dari tab Bisnis disorot sebentar. */
+.lcard.spot { animation: spot 1.6s var(--ease); }
+@keyframes spot { 0%, 40% { box-shadow: 0 0 0 3px var(--blue); } 100% { box-shadow: 0 0 0 3px #0a6cf500; } }
 
 /* Pop-up konfirmasi di tengah layar */
 html:has(.cdlg[open]) { overflow: hidden; }
@@ -143,6 +149,7 @@ button { cursor: pointer; }
 .f-green { --f: var(--green); }
 .f-red { --f: var(--red); }
 .f-blue { --f: var(--blue); --on: #fff; }
+.f-wa { --f: #25d366; }
 .f-white { --f: var(--surface); }
 
 .folders { display: grid; grid-template-columns: minmax(0, 1fr); margin-top: var(--tab); }
@@ -215,6 +222,9 @@ button { cursor: pointer; }
   .lcard-more > summary:hover { background: var(--canvas); }
   .cdlg .cta.danger:hover { background: #9c0c05; }
   .folders > .folder-link:hover { transform: translateY(-4px); }
+  .visit-days button:hover { background: #dce6f8; }
+  .visit-days button[aria-pressed='true']:hover { background: var(--blue); }
+  .cta-review:hover { background: #ffe066; }
 }
 
 /* Kartu */
@@ -229,13 +239,25 @@ button { cursor: pointer; }
 .review-head { display: flex; align-items: center; gap: 8px; }
 .review-head svg { width: 20px; height: 20px; flex: none; }
 .score-card .review-head svg { width: 28px; height: 28px; padding: 4px; border-radius: 50%; background: var(--surface); }
-.review-score { font-size: 72px; font-weight: 700; font-stretch: 125%; line-height: 1; letter-spacing: -.03em; margin-top: 12px; }
+/* Kiri ringkasan bintang, kanan angka besar, seperti ringkasan ulasan Google. */
+.score-grid { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); align-items: center; gap: 12px; margin-top: 16px; }
+.spread { display: grid; gap: 8px; }
+.spread h3 { font-size: 15px; font-stretch: 112%; }
+.spread small { font-size: 11px; opacity: .8; }
+.spread-bars { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.spread-bars li { display: grid; grid-template-columns: 10px minmax(0, 1fr); align-items: center; gap: 8px; font-size: 12px; line-height: 1; }
+.spread-bars i { display: block; height: 8px; border-radius: 99px; background: #f1f3f4; overflow: hidden; }
+.spread-bars b { display: block; height: 100%; border-radius: 99px; background: #fbbc04; }
+.score-main { display: grid; justify-items: center; gap: 6px; text-align: center; }
+.review-score { font-size: 64px; font-weight: 700; font-stretch: 125%; line-height: 1; letter-spacing: -.03em; }
 .review-count { font-size: 17px; font-weight: 700; font-stretch: 125%; letter-spacing: -.01em; }
 .review-count-only { font-size: 40px; margin-top: 16px; }
-.star-track { position: relative; display: block; width: 132px; height: 24px; margin-top: 4px; color: #ffffff4d; }
-.star-track svg { display: block; width: 132px; height: 24px; }
-.star-fill { position: absolute; inset: 0 auto 0 0; overflow: hidden; color: var(--yellow); }
-.score-source { justify-self: start; margin-top: 12px; padding: 4px 12px; border-radius: 99px; background: var(--surface); color: var(--ink); font-size: 12px; font-weight: 500; }
+.gstars { display: flex; gap: 1px; }
+.gstar { position: relative; display: block; width: 22px; height: 22px; color: #dadce0; }
+.gstar svg { display: block; width: 22px; height: 22px; }
+.gstar.full { color: #fbbc04; }
+.gstar-half { position: absolute; inset: 0 50% 0 0; overflow: hidden; color: #fbbc04; }
+.score-source { justify-self: start; margin-top: 16px; padding: 4px 12px; border-radius: 99px; background: var(--surface); color: var(--ink); font-size: 12px; font-weight: 500; }
 
 /* Grafik batang */
 .capsules { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 8px; margin-top: 12px; }
@@ -254,13 +276,26 @@ button { cursor: pointer; }
 .split > div { background: var(--canvas); border-radius: var(--r-md); padding: 12px; }
 .split .num { font-size: 24px; display: block; line-height: 1.25; }
 .split small { color: var(--ink-2); font-size: 12px; }
+.split > .stat-ico { position: relative; }
+.stat-ico .i { position: absolute; top: 12px; right: 12px; width: 22px; height: 22px; color: var(--blue); }
 .ba-split small { display: block; }
 .ba-gain { background: #e4eeff; color: #0b49c0; border-radius: var(--r-md); padding: 10px 12px; font-weight: 700; text-align: center; }
 .split-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; align-items: start; }
 
+/* Jam ramai: sama dengan Jam pengunjung di halaman depan. Hanya tiga jam teramai yang berwarna. */
+.visits-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 2px 8px; }
+.visits-head small { color: var(--ink-2); font-size: 12px; }
+.visit-days { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; }
+.visit-days button { min-height: 44px; padding: 0; border: 0; border-radius: 12px; background: var(--canvas); color: var(--ink); font-size: 13px; font-weight: 600; transition: background .2s, color .2s; }
+.visit-days button[aria-pressed='true'] { background: var(--blue); color: #fff; }
 .hours { display: grid; grid-template-columns: repeat(24, minmax(0, 1fr)); gap: 2px; align-items: end; height: 72px; }
-.hours i { display: block; background: var(--blue); border-radius: 2px 2px 0 0; min-height: 2px; }
-.hours-axis { display: flex; justify-content: space-between; font-size: 12px; color: var(--ink-2); }
+.hours i { display: block; height: 0; min-height: 2px; border-radius: 2px 2px 0 0; background: var(--line); transition: height .35s var(--ease), background-color .2s; }
+.hours i.hot { background: var(--blue); }
+.panel > .hours-axis { display: flex; justify-content: space-between; margin-top: 4px; font-size: 12px; color: var(--ink-2); }
+.visit-note { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; }
+.visit-note i { width: 10px; height: 10px; flex: none; border-radius: 50%; background: var(--blue); }
+.visit-note.empty { color: var(--ink-2); font-weight: 500; }
+.visit-note.empty i { background: var(--line); }
 
 /* Formulir */
 .field { display: grid; gap: 6px; font-size: 14px; font-weight: 500; }
@@ -344,7 +379,10 @@ button { cursor: pointer; }
 .demo-banner { background: var(--ink); color: var(--yellow); font-size: 12px; font-weight: 600; text-align: center; padding: 6px 12px; }
 
 .plan-chip { font-size: 12px; font-weight: 600; padding: 4px 12px; border-radius: 99px; background: var(--track); color: var(--ink); white-space: nowrap; flex: none; }
-.plan-chip.pro { background: var(--ink); color: #fff; }
+.plan-chip.pro { display: inline-flex; align-items: center; gap: 4px; padding-left: 6px; background: var(--blue); color: #fff; }
+.plan-chip .seal { width: 16px; height: 16px; }
+.plan-chip.trial { background: #e35d56; color: #fff; }
+.plan-chip.basic { background: var(--yellow); color: var(--ink); }
 .plan-chip.off { background: #ffe4e2; color: var(--red-ink); }
 .plan-chip.done { background: #dff5e7; color: var(--green-ink); }
 
@@ -371,6 +409,8 @@ details.drawer[open] > summary { margin-bottom: 12px; }
 .sheet-mini { padding: 20px 16px 16px; text-align: left; }
 .sheet-mini h1 { margin-top: 16px; font-size: 28px; overflow-wrap: anywhere; }
 .sheet-mini p { margin: 8px 0 88px; max-width: 34ch; font-size: 16px; }
+.cta-review { background: var(--yellow); color: var(--ink); }
+.cta-review:active { background: #ffd000; }
 .initial { width: 64px; height: 64px; border-radius: 50%; display: grid; place-items: center; font-size: 26px; font-weight: 700; font-stretch: 125%; color: var(--ink); background: var(--surface); }
 .page-mini { padding: max(16px, env(safe-area-inset-top)) 0 0; }
 .page-mini .sheet-mini { margin: var(--tab) 16px 0; }

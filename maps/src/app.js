@@ -307,11 +307,11 @@ function miniPage(business, card, source) {
   <div class="initial" aria-hidden="true">${esc(business.name.slice(0, 1).toUpperCase())}</div>
   <h1>${esc(business.name)}</h1>
   <p>${esc(business.tagline || 'Terima kasih sudah berkunjung.')}</p>
-  <a class="cta" href="/u/${esc(card.code)}/ulas?s=${source}">Tulis ulasan di Google</a>
+  <a class="cta cta-review" href="/u/${esc(card.code)}/ulas?s=${source}"><svg class="i" aria-hidden="true"><use href="/icons.svg#pencil"/></svg>Tulis ulasan di Google</a>
 </header>
 <main class="wrap stack">
   <section class="panel">
-    <h2>Ada yang perlu kami tahu?</h2>
+    <h2>Kasih Kami Kritik dan Saran</h2>
     <p class="muted">Pesan ini hanya dibaca pemilik, dan tidak tampil di Google.</p>
     <form id="fb" class="stack-sm">
       <label class="field"><span>Pesan</span><textarea name="message" rows="3" maxlength="1000" required placeholder="Tulis masukan Anda di sini"></textarea></label>
@@ -332,10 +332,20 @@ export function createApp() {
   const recentTaps = new Map();
 
   app.use(async (c, next) => {
+    // Lapis kedua selain cookie SameSite: perubahan data hanya diterima dari halaman situs ini sendiri.
+    if (c.req.method !== 'GET' && c.req.method !== 'HEAD' && c.req.path.startsWith('/api/')) {
+      const origin = c.req.header('origin');
+      const site = c.req.header('sec-fetch-site');
+      if ((origin && origin !== new URL(c.req.url).origin) || site === 'cross-site') {
+        return c.json({ error: 'Permintaan ditolak.' }, 403);
+      }
+    }
     await next();
     c.res.headers.set('Content-Security-Policy', CSP);
     c.res.headers.set('X-Content-Type-Options', 'nosniff');
     c.res.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
+    c.res.headers.set('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
+    if (c.req.url.startsWith('https://')) c.res.headers.set('Strict-Transport-Security', 'max-age=31536000');
   });
 
   // ---------- Tap dan QR ----------
@@ -618,16 +628,19 @@ export function createApp() {
     const sources = await all(c, `SELECT source, COUNT(*) AS n FROM events
       WHERE business_id = ? AND type = 'tap' AND ts >= ? GROUP BY source`, id, since);
     const hourRows = await all(c, `
-      SELECT CAST(strftime('%H', ts / 1000 + ${WIB_SECONDS}, 'unixepoch') AS INTEGER) AS h, COUNT(*) AS n
-      FROM events WHERE business_id = ? AND type = 'tap' AND ts >= ? GROUP BY h`, id, since);
-    const hours = Array.from({ length: 24 }, (_, h) => hourRows.find((r) => r.h === h)?.n ?? 0);
+      SELECT CAST(strftime('%w', ts / 1000 + ${WIB_SECONDS}, 'unixepoch') AS INTEGER) AS d,
+        CAST(strftime('%H', ts / 1000 + ${WIB_SECONDS}, 'unixepoch') AS INTEGER) AS h, COUNT(*) AS n
+      FROM events WHERE business_id = ? AND type = 'tap' AND ts >= ? GROUP BY d, h`, id, since);
+    const hours = Array.from({ length: 24 }, (_, h) => hourRows.reduce((sum, r) => sum + (r.h === h ? r.n : 0), 0));
+    // Baris = hari (0 Minggu sampai 6 Sabtu, WIB), kolom = jam.
+    const hourGrid = Array.from({ length: 7 }, (_, d) => Array.from({ length: 24 }, (_, h) => hourRows.find((r) => r.d === d && r.h === h)?.n ?? 0));
     const { n: reviewClicks } = await first(c, `SELECT COUNT(*) AS n FROM events
       WHERE business_id = ? AND type = 'review_click' AND ts >= ?`, id, since);
     const perCard = await all(c, `
       SELECT c.id, c.code, c.label, COUNT(e.id) AS n FROM cards c
       LEFT JOIN events e ON e.card_id = c.id AND e.type = 'tap' AND e.ts >= ?
       WHERE c.business_id = ? GROUP BY c.id ORDER BY n DESC`, since, id);
-    return c.json({ ...stats, monthTaps, sources, hours, reviewClicks, perCard, beforeAfter: await beforeAfter(c, id) });
+    return c.json({ ...stats, monthTaps, sources, hours, hourGrid, reviewClicks, perCard, beforeAfter: await beforeAfter(c, id) });
   });
 
   app.get('/api/inbox', requireOwner, requirePro, async (c) => {
@@ -737,6 +750,7 @@ export function createApp() {
           (SELECT COUNT(*) FROM cards c WHERE c.business_id = b.id) AS cards,
           (SELECT GROUP_CONCAT(c.code, ' ') FROM cards c WHERE c.business_id = b.id) AS codes,
           (SELECT r.name FROM cards c JOIN resellers r ON r.id = c.reseller_id WHERE c.business_id = b.id LIMIT 1) AS seller,
+          (SELECT c.reseller_id FROM cards c WHERE c.business_id = b.id AND c.reseller_id IS NOT NULL LIMIT 1) AS sellerId,
           (SELECT COUNT(*) FROM events e WHERE e.business_id = b.id AND e.type = 'tap' AND e.ts >= ?) AS taps30
         FROM businesses b ORDER BY b.created_at DESC LIMIT 500`, since),
       query('SELECT key, value FROM settings WHERE key LIKE ?', `google_calls:${usageMonth()}:%`),

@@ -169,6 +169,13 @@ button { cursor: pointer; }
 .plan-bundle .save-row { color: var(--ink); }
 .save { padding: 4px 10px; white-space: nowrap; border-radius: 99px; background: #e4eeff; color: var(--blue-deep); font-size: 13px; font-weight: 700; }
 .plan-pro .save { background: var(--yellow); color: var(--ink); }
+/* Harga coret pembanding: di layar lebar ikut baris harga, di ponsel sejajar label hemat di kanan. */
+.s-side { display: none; }
+@media (max-width: 599px) {
+  .price .s-wide { display: none; }
+  .s-side { display: block; margin-left: auto; font-size: 13px; white-space: nowrap; }
+  .save-note { flex-basis: 100%; }
+}
 .plan-bundle { background: #4ade80; color: var(--ink); box-shadow: 0 20px 32px -22px #0f6b3066; }
 .plan-bundle .plan-icon { background: #fff; color: var(--blue); }
 .plan-bundle .price, .plan-bundle .plan-desc, .plan-bundle .plan-note, .plan-bundle .price s { color: var(--ink); }
@@ -220,24 +227,13 @@ button { cursor: pointer; }
 .visit-days { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; }
 .visit-days button { min-height: 44px; padding: 0; border: 0; border-radius: 12px; background: var(--pale); color: var(--ink); font-size: 13px; font-weight: 600; transition: background .2s, color .2s; }
 .visit-days button[aria-pressed='true'] { background: var(--blue); color: #fff; }
-.visit-bars { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 4px; align-items: end; height: 72px; }
-.visit-bars i { display: block; border-radius: 4px 4px 0 0; background: #bcd4fb; transition: height .35s var(--ease), background-color .2s; }
-.visit-bars i.hot { background: var(--red); }
-.visit-bars i:nth-child(1) { height: 8px; }
-.visit-bars i:nth-child(2) { height: 14px; }
-.visit-bars i:nth-child(3) { height: 30px; }
-.visit-bars i:nth-child(4) { height: 26px; }
-.visit-bars i:nth-child(5) { height: 12px; }
-.visit-bars i:nth-child(6) { height: 10px; }
-.visit-bars i:nth-child(7) { height: 16px; }
-.visit-bars i:nth-child(8) { height: 30px; }
-.visit-bars i:nth-child(9) { height: 52px; }
-.visit-bars i:nth-child(10) { height: 60px; }
-.visit-bars i:nth-child(11) { height: 48px; }
-.visit-bars i:nth-child(12) { height: 24px; }
+/* Batang sama dengan Jam ramai di dasbor: 24 jam, hanya tiga jam teramai yang berwarna. */
+.visit-bars { display: grid; grid-template-columns: repeat(24, minmax(0, 1fr)); gap: 2px; align-items: end; height: 72px; }
+.visit-bars i { display: block; height: 2px; min-height: 2px; border-radius: 2px 2px 0 0; background: var(--line); transition: height .35s var(--ease), background-color .2s; }
+.visit-bars i.hot { background: var(--blue); }
 .visit-axis { display: flex; justify-content: space-between; margin-top: -4px; color: var(--ink-2); font-size: 12px; }
 .visit-note { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; }
-.visit-note i { width: 10px; height: 10px; flex: none; border-radius: 50%; background: var(--red); }
+.visit-note i { width: 10px; height: 10px; flex: none; border-radius: 50%; background: var(--blue); }
 .insights-box { padding: 16px; border-radius: 24px; background: var(--pale); }
 .insights-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .insights-nav { display: flex; gap: 8px; flex: none; }
