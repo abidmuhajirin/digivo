@@ -8,7 +8,7 @@
     "dev": "wrangler dev --port 3000",
     "deploy": "wrangler deploy",
     "db:init": "wrangler d1 execute digivo-maps-db --remote --file=schema.sql",
-    "db:migrate": "wrangler d1 execute digivo-maps-db --remote --file=migrations/002-reseller.sql",
+    "db:migrate": "wrangler d1 execute digivo-maps-db --remote --file=migrations/003-socials.sql",
     "db:init:local": "wrangler d1 execute digivo-maps-db --local --file=schema.sql",
     "seed:demo": "node scripts/seed-demo.js",
     "demo:hapus": "wrangler d1 execute digivo-maps-db --remote --file=scripts/demo-hapus.sql",

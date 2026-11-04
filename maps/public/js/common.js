@@ -1,3 +1,5 @@
+import '/js/fields.js';
+
 export async function api(path, { method = 'GET', body } = {}) {
   const res = await fetch(path, {
     method,

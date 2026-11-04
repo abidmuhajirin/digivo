@@ -1,4 +1,6 @@
 import { api, bindForm, esc, formatDate, icon, moveDock, seal, toast, waUrl } from '/js/common.js';
+import { scoreGrid } from '/js/rating.js';
+import { SOCIALS, socialText } from '/js/socials.js';
 
 const view = document.getElementById('view');
 const dock = document.querySelector('.dock');
@@ -8,7 +10,6 @@ const TONES = { beranda: 'yellow', masukan: 'blue', kartu: 'green', atur: 'red' 
 const DAY_NAMES = ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'];
 // Urutan tombol hari sama dengan Jam pengunjung di halaman depan. Angka pertama = getUTCDay().
 const WEEK = [[1, 'Sen', 'Senin'], [2, 'Sel', 'Selasa'], [3, 'Rab', 'Rabu'], [4, 'Kam', 'Kamis'], [5, 'Jum', 'Jumat'], [6, 'Sab', 'Sabtu'], [0, 'Ahad', 'Ahad']];
-const STAR = '<svg viewBox="0 0 24 24" aria-hidden="true"><use href="/icons.svg#gstar"/></svg>';
 
 let me;
 let stats;
@@ -107,33 +108,6 @@ function beforeAfterPanel() {
   </section>`;
 }
 
-const formatRating = (rating) => rating.toFixed(1).replace('.', ',');
-
-// Bintang dibulatkan ke setengah terdekat seperti di Google Maps: kuning, setengah, atau abu-abu.
-function googleStars(rating) {
-  const rounded = Math.round(rating * 2) / 2;
-  return Array.from({ length: 5 }, (_, i) => {
-    const kind = rounded >= i + 1 ? 'full' : rounded >= i + 0.5 ? 'half' : 'empty';
-    return `<span class="gstar ${kind}">${STAR}${kind === 'half' ? `<span class="gstar-half">${STAR}</span>` : ''}</span>`;
-  }).join('');
-}
-
-// Google tidak membagikan jumlah per bintang, jadi panjang batang diperkirakan dari rating rata-rata.
-function ratingSpread(rating) {
-  const target = Math.min(5, Math.max(1, rating));
-  const weights = (t) => [5, 4, 3, 2, 1].map((star) => Math.exp(t * star));
-  const mean = (t) => weights(t).reduce((sum, w, i) => sum + w * (5 - i), 0) / weights(t).reduce((sum, w) => sum + w, 0);
-  let low = -12;
-  let high = 12;
-  for (let i = 0; i < 40; i += 1) {
-    const mid = (low + high) / 2;
-    if (mean(mid) < target) low = mid; else high = mid;
-  }
-  const list = weights(low);
-  const top = Math.max(...list);
-  return list.map((w) => Math.max(4, Math.round((w / top) * 100)));
-}
-
 function reviewForm(hasData) {
   return `
     <form id="review-form" class="stack-sm">
@@ -160,23 +134,9 @@ function reviewsPanel() {
       ${form}
     </section>`;
   }
-  const count = `${data.count.toLocaleString('id-ID')} ulasan`;
   return `<section class="folder score-card">
       ${head}
-      ${data.rating ? `
-      <div class="score-grid">
-        <div class="spread">
-          <h3>Ringkasan Ulasan</h3>
-          <ol class="spread-bars" aria-label="Perkiraan sebaran bintang dari rating rata-rata">${ratingSpread(data.rating).map((w, i) =>
-            `<li><span>${5 - i}</span><i><b data-w="${w}"></b></i></li>`).join('')}</ol>
-          <small>Perkiraan dari rating</small>
-        </div>
-        <div class="score-main">
-          <b class="review-score">${formatRating(data.rating)}</b>
-          <span class="gstars" role="img" aria-label="Rating ${formatRating(data.rating)} dari 5">${googleStars(data.rating)}</span>
-          <p class="review-count">${count}</p>
-        </div>
-      </div>` : `<p class="review-count review-count-only">${count}</p>`}
+      ${scoreGrid(data)}
       <p class="score-source">${data.source === 'google' ? 'Otomatis dari Google' : 'Diisi manual'}, ${formatDate(data.at)}</p>
     </section>
     ${form ? `<section class="panel">${form}</section>` : ''}`;
@@ -225,7 +185,7 @@ function renderBeranda() {
         </div>
         ${business.mode === 'page' ? '' : '<p class="muted">"Lanjut ke Google" hanya terhitung saat Minipage aktif.</p>'}
       </section>
-      <section class="panel"><div class="visits-head"><h2>Jam ramai</h2><small>30 hari terakhir</small></div>${stats.monthTaps ? hoursChart() : '<p class="muted">Muncul setelah ada tap pertama.</p>'}</section>
+      <section class="panel"><div class="visits-head"><h2>Jam ramai</h2><small>*hasil dari tap pengunjung, 30 hari terakhir</small></div>${stats.monthTaps ? hoursChart() : '<p class="muted">Muncul setelah ada tap pertama.</p>'}</section>
       <section class="panel">
         <h2>Kartu paling aktif</h2>
         <ul class="list">${stats.perCard.map((card, i) => `
@@ -358,6 +318,33 @@ function renderKartu() {
   });
 }
 
+const socialTile = (key) => `<span class="soc soc-${key}" aria-hidden="true"><svg><use href="/icons.svg#${key}"/></svg></span>`;
+
+// Social media Minipage: WhatsApp selalu tampil, platform lain muncul setelah ditambahkan.
+function socialsField(business) {
+  const rows = [
+    { key: 'whatsapp', label: 'WhatsApp', placeholder: 'WhatsApp: 628xxxxxxxxxx', value: business.whatsapp, extra: 'inputmode="tel" maxlength="20"' },
+    ...SOCIALS.map(({ key, label, placeholder }) => ({
+      key,
+      label,
+      placeholder: `${label}: ${placeholder}`,
+      value: business.socials[key] ? socialText(key, business.socials[key]) : '',
+      extra: 'maxlength="200" autocapitalize="off" spellcheck="false"',
+    })),
+  ];
+  const missing = rows.filter((row) => row.key !== 'whatsapp' && !row.value);
+  return `
+    <fieldset class="socials">
+      <legend>Social media</legend>
+      ${rows.map((row) => `
+      <label class="soc-row" data-social="${row.key}"${row.key === 'whatsapp' || row.value ? '' : ' hidden'}>${socialTile(row.key)}<span class="hp">${row.label}</span>
+        <input name="${row.key}" ${row.extra} value="${esc(row.value)}" placeholder="${esc(row.placeholder)}"></label>`).join('')}
+      <div class="soc-add"${missing.length ? '' : ' hidden'}>${missing.map((row) =>
+        `<button type="button" class="soc-chip" data-add-social="${row.key}">${icon('plus')}${row.label}</button>`).join('')}</div>
+      <small class="soc-hint">Isi nama akun atau tempel link profil. Kosongkan untuk menghapus.</small>
+    </fieldset>`;
+}
+
 function renderAtur() {
   const { business } = me;
   const pro = isPro();
@@ -390,8 +377,7 @@ function renderAtur() {
           <input type="checkbox" id="mode" ${business.mode === 'page' ? 'checked' : ''} aria-label="Aktifkan Minipage"></label>
         <form id="mini" class="stack-sm">
           <label class="field"><span>Sapaan</span><input name="tagline" maxlength="120" value="${esc(business.tagline)}" placeholder="Terima kasih sudah berkunjung."></label>
-          <label class="field"><span>Nomor WhatsApp</span><input name="whatsapp" inputmode="tel" maxlength="20" value="${esc(business.whatsapp)}" placeholder="628xxxxxxxxxx"></label>
-          <label class="field"><span>Instagram</span><input name="instagram" maxlength="60" value="${esc(business.instagram)}" placeholder="@namabisnis"></label>
+          ${socialsField(business)}
           <label class="field"><span>Link menu atau katalog</span><input name="menuUrl" inputmode="url" maxlength="500" value="${esc(business.menuUrl)}" placeholder="https://"></label>
           <p class="form-msg" role="status"></p>
           <button class="btn" type="submit">Simpan Minipage</button>
@@ -429,9 +415,26 @@ function renderAtur() {
     renderAtur();
     toast('Perubahan disimpan');
   });
-  document.getElementById('mini') && bindForm(document.getElementById('mini'), async (values, message) => {
-    const data = await api('/api/me', { method: 'PUT', body: values });
+  const mini = document.getElementById('mini');
+  mini?.addEventListener('click', (event) => {
+    const chip = event.target.closest('[data-add-social]');
+    if (!chip) return;
+    const row = mini.querySelector(`[data-social="${chip.dataset.addSocial}"]`);
+    row.hidden = false;
+    chip.remove();
+    if (!mini.querySelector('[data-add-social]')) mini.querySelector('.soc-add').hidden = true;
+    row.querySelector('input').focus();
+  });
+  if (mini) bindForm(mini, async ({ tagline, whatsapp, menuUrl, ...rest }, message) => {
+    const socials = Object.fromEntries(SOCIALS.map(({ key }) => [key, rest[key] ?? '']));
+    const data = await api('/api/me', { method: 'PUT', body: { tagline, whatsapp, menuUrl, socials } });
     me.business = data.business;
+    // Link profil yang ditempel tampil lagi sebagai nama akun yang tersimpan.
+    for (const { key } of SOCIALS) {
+      const handle = data.business.socials[key];
+      mini.elements[key].value = handle ? socialText(key, handle) : '';
+      mini.elements[key].defaultValue = mini.elements[key].value;
+    }
     saved(message);
   });
   document.getElementById('mode')?.addEventListener('change', async (event) => {

@@ -1,3 +1,8 @@
+import '/js/fields.js';
+
+// Lebar batang ringkasan ulasan dipasang di sini karena CSP melarang atribut style.
+document.querySelectorAll('[data-w]').forEach((node) => { node.style.width = `${node.dataset.w}%`; });
+
 const form = document.getElementById('fb');
 const message = form.querySelector('.form-msg');
 

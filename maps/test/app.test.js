@@ -309,7 +309,8 @@ test('fitur Pro terkunci di server, minipage tidak pernah menyaring pelanggan', 
 
   const html = await (await call(`/u/${card.code}`)).text();
   assert.match(html, /Tulis ulasan di Google/);
-  assert.doesNotMatch(html, /bintang/i);
+  // Tidak ada pilihan bintang sebelum ke Google (review gating dilarang Google).
+  assert.doesNotMatch(html, /type="radio"|data-rating|pilih bintang/i);
 
   const click = await call(`/u/${card.code}/ulas?s=nfc`);
   assert.equal(click.headers.get('location'), REVIEW);
@@ -326,6 +327,30 @@ test('fitur Pro terkunci di server, minipage tidak pernah menyaring pelanggan', 
   assert.ok(stats.hourGrid[wib.getUTCDay()][wib.getUTCHours()] >= 1);
   assert.equal(stats.hourGrid.flat().reduce((sum, n) => sum + n, 0), stats.hours.reduce((sum, n) => sum + n, 0));
   assert.match(html, /Kasih Kami Kritik dan Saran/);
+
+  // Social media: link profil dan nama akun diterima, disimpan sebagai nama akun, link selalu ke domain resmi.
+  const saved = await call('/api/me', { method: 'PUT', cookie, body: { whatsapp: '628123456789', socials: {
+    instagram: 'https://www.instagram.com/warung.uji/?hl=id', tiktok: '@warunguji', facebook: 'https://facebook.com/profile.php?id=1000123456', youtube: '',
+  } } });
+  assert.equal(saved.status, 200);
+  assert.deepEqual((await saved.json()).business.socials, { instagram: 'warung.uji', tiktok: 'warunguji', facebook: '1000123456' });
+  for (const evil of ['javascript:alert(1)', 'https://penipuan.example/x', '"><script>', 'a b']) {
+    const bad = await call('/api/me', { method: 'PUT', cookie, body: { socials: { tiktok: evil } } });
+    assert.equal(bad.status, 400, evil);
+  }
+  assert.equal((await call('/api/me', { method: 'PUT', cookie, body: { socials: 'x' } })).status, 400);
+  await call('/api/reviews', { method: 'POST', cookie, body: { reviewCount: '128', rating: '4,6' } });
+  const page = await (await call(`/u/${card.code}`)).text();
+  assert.match(page, /href="https:\/\/www\.instagram\.com\/warung\.uji"/);
+  assert.match(page, /href="https:\/\/www\.tiktok\.com\/@warunguji"/);
+  assert.match(page, /href="https:\/\/www\.facebook\.com\/profile\.php\?id=1000123456"/);
+  assert.match(page, /href="https:\/\/wa\.me\/628123456789"/);
+  assert.doesNotMatch(page, /youtube\.com/);
+  // Ringkasan ulasan tampil untuk semua pelanggan, tombol ulasan tetap satu dan sama.
+  assert.match(page, /class="review-score">4,6</);
+  assert.match(page, /128 ulasan/);
+  assert.equal(page.match(/\/ulas\?s=/g).length, 1);
+  assert.doesNotMatch(page, /type="radio"|data-rating/);
 });
 
 test('banyak kartu satu bisnis, reset kartu terakhir menghapus bisnis', async () => {

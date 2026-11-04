@@ -31,7 +31,7 @@ export function renderPrintSheet({ brand, baseUrl, batch, cards }) {
   return `<!doctype html>
 <html lang="id"><head><meta charset="utf-8"><title>Cetak batch #${batch.id} - ${esc(brand)}</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="/icons/white.svg" type="image/svg+xml">
 <link rel="stylesheet" href="/css/print.css"></head>
 <body>
 <header class="print-toolbar">

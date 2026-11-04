@@ -6,6 +6,8 @@ import {
 } from './security.js';
 import { fetchPlaceStats, resolveLink, reviewUrlForPlace, searchPlaces } from './google.js';
 import { cardUrls, renderPrintSheet } from './print.js';
+import { scoreGrid } from '../public/js/rating.js';
+import { SOCIALS, socialHandle, socialText, socialUrl } from '../public/js/socials.js';
 
 const DAY = 86_400_000;
 const WIB_SECONDS = 7 * 3600;
@@ -123,6 +125,13 @@ function destination(c, { link, placeId }) {
   return resolveLink(link, { apiKey: c.env.GOOGLE_PLACES_API_KEY, fetchImpl: c.env.fetchImpl, onSearch: () => countGoogleCall(c, 'search') });
 }
 
+function readSocials(business) {
+  let saved = {};
+  try { saved = JSON.parse(business.socials || '{}'); } catch { saved = {}; }
+  // Hanya platform yang dikenal dan nama akun yang lolos pemeriksaan yang dipakai.
+  return Object.fromEntries(SOCIALS.map(({ key }) => [key, socialHandle(key, saved[key]) || '']).filter(([, handle]) => handle));
+}
+
 function publicBusiness(c, business) {
   return {
     name: business.name,
@@ -135,7 +144,7 @@ function publicBusiness(c, business) {
     mode: business.mode,
     tagline: business.tagline,
     whatsapp: business.whatsapp,
-    instagram: business.instagram,
+    socials: readSocials(business),
     menuUrl: business.menu_url,
     isDemo: Boolean(business.is_demo),
     linkLocked: Boolean(business.link_locked),
@@ -290,23 +299,30 @@ async function beforeAfter(c, businessId) {
   return { before, after: rows.length > 1 ? latest : null, gained: latest.count - before.count };
 }
 
-function miniPage(business, card, source) {
+const socialIcon = (key) => `<span class="soc soc-${key}" aria-hidden="true"><svg><use href="/icons.svg#${key}"/></svg></span>`;
+const linkRow = (href, iconHtml, label, detail = '') =>
+  `<a class="row-link" href="${esc(href)}" target="_blank" rel="noopener">${iconHtml}<span class="grow">${esc(label)}${detail ? `<small>${esc(detail)}</small>` : ''}</span></a>`;
+
+function miniPage(business, card, source, reviews) {
   const whatsapp = business.whatsapp.replace(/\D/g, '');
+  const socials = readSocials(business);
   const links = [
-    whatsapp && `<a class="row-link" href="https://wa.me/${esc(whatsapp)}" rel="noopener"><svg class="i"><use href="/icons.svg#chat"/></svg>Chat WhatsApp</a>`,
-    business.instagram && `<a class="row-link" href="https://instagram.com/${esc(business.instagram.replace(/^@/, ''))}" rel="noopener"><svg class="i"><use href="/icons.svg#link"/></svg>Instagram</a>`,
-    business.menu_url && `<a class="row-link" href="${esc(business.menu_url)}" rel="noopener"><svg class="i"><use href="/icons.svg#link"/></svg>Lihat menu atau katalog</a>`,
+    whatsapp && linkRow(`https://wa.me/${whatsapp}`, socialIcon('whatsapp'), 'Chat WhatsApp'),
+    ...SOCIALS.filter(({ key }) => socials[key]).map(({ key, label }) =>
+      linkRow(socialUrl(key, socials[key]), socialIcon(key), label, socialText(key, socials[key]))),
+    business.menu_url && linkRow(business.menu_url, socialIcon('link'), 'Lihat menu atau katalog'),
   ].filter(Boolean).join('');
 
   return `<!doctype html>
 <html lang="id"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#f3f3ef"><meta name="robots" content="noindex"><title>${esc(business.name)}</title>
-<link rel="icon" href="/favicon.svg" type="image/svg+xml"><link rel="stylesheet" href="/css/app.css"></head>
+<meta name="theme-color" content="#eef2fa"><meta name="robots" content="noindex"><title>${esc(business.name)}</title>
+<link rel="icon" href="/icons/blue.svg" type="image/svg+xml"><link rel="apple-touch-icon" href="/icons/blue-180.png"><link rel="stylesheet" href="/css/app.css"></head>
 <body class="page-mini" data-code="${esc(card.code)}">
 <header class="folder score-card sheet-mini">
-  <div class="initial" aria-hidden="true">${esc(business.name.slice(0, 1).toUpperCase())}</div>
+  <div class="review-head"><svg viewBox="0 0 48 48" aria-hidden="true"><use href="/icons.svg#google-g"/></svg><span>Ulasan Google</span></div>
   <h1>${esc(business.name)}</h1>
-  <p>${esc(business.tagline || 'Terima kasih sudah berkunjung.')}</p>
+  <p class="mini-tagline">${esc(business.tagline || 'Terima kasih sudah berkunjung.')}</p>
+  ${reviews ? scoreGrid(reviews) : ''}
   <a class="cta cta-review" href="/u/${esc(card.code)}/ulas?s=${source}"><svg class="i" aria-hidden="true"><use href="/icons.svg#pencil"/></svg>Tulis ulasan di Google</a>
 </header>
 <main class="wrap stack">
@@ -323,7 +339,7 @@ function miniPage(business, card, source) {
   </section>
   ${links ? `<nav class="panel link-list" aria-label="Tautan ${esc(business.name)}">${links}</nav>` : ''}
 </main>
-<script src="/js/mini.js" defer></script>
+<script type="module" src="/js/mini.js"></script>
 </body></html>`;
 }
 
@@ -386,7 +402,7 @@ export function createApp() {
     if (!card?.business_id) return sendPage(c, 'not-found.html', 404);
     const business = await businessById(c, card.business_id);
     if (!isPro(business)) return c.redirect(business.review_url, 302);
-    return c.html(miniPage(business, card, c.req.query('s') === 'nfc' ? 'nfc' : 'qr'));
+    return c.html(miniPage(business, card, c.req.query('s') === 'nfc' ? 'nfc' : 'qr', await latestReviews(c, business.id)));
   });
 
   app.get('/u/:code/ulas', async (c) => {
@@ -538,7 +554,7 @@ export function createApp() {
   });
 
   app.put('/api/me', requireOwner, async (c) => {
-    const { name, link, placeId, tagline, whatsapp, instagram, menuUrl, mode } = await body(c);
+    const { name, link, placeId, tagline, whatsapp, socials, menuUrl, mode } = await body(c);
     const business = c.get('business');
     const updates = {};
 
@@ -562,7 +578,16 @@ export function createApp() {
     }
     if (tagline !== undefined) updates.tagline = cleanText(tagline, 120);
     if (whatsapp !== undefined) updates.whatsapp = cleanText(whatsapp, 20).replace(/[^\d+]/g, '');
-    if (instagram !== undefined) updates.instagram = cleanText(instagram, 60).replace(/[^\w.@]/g, '');
+    if (socials !== undefined) {
+      if (!socials || typeof socials !== 'object' || Array.isArray(socials)) return c.json({ error: 'Data social media tidak valid.' }, 400);
+      const saved = {};
+      for (const { key, label } of SOCIALS) {
+        const handle = socialHandle(key, cleanText(socials[key], 200));
+        if (handle === null) return c.json({ error: `Akun ${label} tidak valid. Isi nama akun atau link profilnya.` }, 400);
+        if (handle) saved[key] = handle;
+      }
+      updates.socials = JSON.stringify(saved);
+    }
     if (menuUrl !== undefined) {
       const url = cleanHttpsUrl(menuUrl);
       if (url === null) return c.json({ error: 'Link menu tidak valid.' }, 400);

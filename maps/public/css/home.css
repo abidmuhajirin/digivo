@@ -176,13 +176,24 @@ button { cursor: pointer; }
   .s-side { display: block; margin-left: auto; font-size: 13px; white-space: nowrap; }
   .save-note { flex-basis: 100%; }
 }
-.plan-bundle { background: #4ade80; color: var(--ink); box-shadow: 0 20px 32px -22px #0f6b3066; }
-.plan-bundle .plan-icon { background: #fff; color: var(--blue); }
-.plan-bundle .price, .plan-bundle .plan-desc, .plan-bundle .plan-note, .plan-bundle .price s { color: var(--ink); }
-.plan-bundle .save { background: var(--yellow); color: var(--ink); }
-.plan-bundle ul { border-top-color: #1b23413d; }
-.plan-bundle li .i { background: var(--ink); color: #4ade80; }
-.plan-bundle .plan-btn { background: var(--ink); color: #fff; }
+/* Bundling: badan hitam dengan aksen empat warna Google di garis atas, ikon centang, dan tombol. */
+.plan-bundle {
+  padding-top: 26px; color: #fff; box-shadow: 0 20px 32px -20px #0000008c;
+  background: linear-gradient(90deg, #4285f4 0 25%, #ea4335 25% 50%, #fbbc04 50% 75%, #34a853 75%) top / 100% 6px no-repeat, #202124;
+}
+.plan-bundle .plan-icon { background: #fff; color: #ea4335; }
+.plan-bundle .price, .plan-bundle .price b { color: #fff; }
+.plan-bundle .plan-desc, .plan-bundle .plan-note, .plan-bundle .price s, .plan-bundle .save-row { color: #bdc1c6; }
+.plan-bundle .save { background: #188038; color: #fff; }
+.plan-bundle .best { background: #fbbc04; color: #202124; }
+.plan-bundle ul { border-top-color: #3c4043; color: #e8eaed; }
+.plan-bundle li .i { color: #fff; }
+.plan-bundle li:nth-child(4n + 1) .i { background: #4285f4; }
+.plan-bundle li:nth-child(4n + 2) .i { background: #ea4335; }
+.plan-bundle li:nth-child(4n + 3) .i { background: #fbbc04; color: #202124; }
+.plan-bundle li:nth-child(4n + 4) .i { background: #34a853; }
+.plan-bundle .plan-btn { background: #1a73e8; color: #fff; }
+.plan-bundle :focus-visible { outline-color: #fff; }
 .best { justify-self: start; display: inline-flex; align-items: center; gap: 6px; padding: 4px 12px; border-radius: 99px; background: var(--yellow); color: var(--ink); font-size: 12px; font-weight: 700; white-space: nowrap; }
 .plan-pro .plan-icon { background: #fff; }
 .plan-pro .price, .plan-pro .price b, .plan-pro .plan-desc, .plan-pro .plan-note { color: #fff; }
@@ -212,9 +223,9 @@ button { cursor: pointer; }
 .tile dt { font-size: 13px; line-height: 1.3; }
 .meters { display: grid; gap: 10px; padding: 8px 4px; }
 .meters h3 { margin-bottom: 2px; }
-.meter { display: grid; grid-template-columns: 32px minmax(0, 1fr) 40px; align-items: center; gap: 8px; font-size: 13px; }
+.meter { display: grid; grid-template-columns: 32px minmax(0, 1fr) 36px; align-items: center; gap: 8px; font-size: 13px; }
 .meter span { font-weight: 600; }
-.meter b { text-align: right; }
+.meter b { text-align: right; font-stretch: 112%; font-weight: 800; }
 .meter i { position: relative; display: block; height: 10px; border-radius: 99px; background: var(--pale); overflow: hidden; }
 .meter i::after { content: ''; position: absolute; inset: 0 auto 0 0; border-radius: 99px; background: var(--blue); }
 .meter-nfc::after { width: 66%; }
@@ -291,6 +302,16 @@ html:has(.dlg[open]) { overflow: hidden; }
 .field input::placeholder, .field textarea::placeholder { color: var(--ink-2); }
 .field input:focus, .field textarea:focus { outline: none; border-color: var(--blue); box-shadow: inset 0 0 0 1px var(--blue); }
 .field [aria-invalid='true'] { border-color: #c5221f; }
+
+/* Tombol hapus cepat di dalam isian, sama dengan dasbor. */
+.fx { position: relative; display: block; min-width: 0; }
+.fx > input, .fx > textarea { padding-right: 48px; }
+.fx-btn { position: absolute; top: 50%; right: 4px; width: 40px; height: 40px; padding: 0; border: 0; border-radius: 50%; background: none; color: var(--ink-2); display: grid; place-items: center; transform: translateY(-50%); }
+.fx-btn:active { background: var(--line); }
+.fx-clear .i { width: 22px; height: 22px; padding: 5px; border-radius: 50%; background: #8892ad; color: #fff; }
+#code-form .fx-btn { right: 8px; }
+.fx-area .fx-btn { top: 4px; transform: none; }
+.fx > :placeholder-shown ~ .fx-clear, .fx > :disabled ~ .fx-clear { display: none; }
 .dlg-msg { color: #c5221f; font-size: 14px; font-weight: 600; }
 .dlg-msg:empty { display: none; }
 .join :focus-visible { outline-color: #fff; }

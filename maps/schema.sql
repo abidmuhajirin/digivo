@@ -28,6 +28,7 @@ CREATE TABLE IF NOT EXISTS businesses (
   tagline TEXT NOT NULL DEFAULT '',
   whatsapp TEXT NOT NULL DEFAULT '',
   instagram TEXT NOT NULL DEFAULT '',
+  socials TEXT NOT NULL DEFAULT '{}',
   menu_url TEXT NOT NULL DEFAULT '',
   failed_pins INTEGER NOT NULL DEFAULT 0,
   locked_until INTEGER NOT NULL DEFAULT 0,
