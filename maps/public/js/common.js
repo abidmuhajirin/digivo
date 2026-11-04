@@ -71,6 +71,22 @@ const SEAL_TONE = { pro: ['#0a6cf5', '#ffffff'], basic: ['#ffd93b', '#1b2341'], 
 export const seal = (tier) => `<svg class="seal" viewBox="0 0 24 24" aria-hidden="true"><path fill="${SEAL_TONE[tier][0]}" d="${SEAL_D}"/><path fill="none" stroke="${SEAL_TONE[tier][1]}" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" d="M7.6 12.3l3 3 5.8-6.2"/></svg>`;
 
 // Konfirmasi di tengah layar dengan gaya aplikasi, pengganti confirm() bawaan browser.
+// Menu bawah: pil kuning digeser ke menu aktif. Transisi baru dinyalakan setelah posisi awal terpasang.
+export function moveDock(dock) {
+  const buttons = [...dock.querySelectorAll('button')];
+  const index = buttons.findIndex((button) => button.getAttribute('aria-current') === 'page');
+  let ink = dock.querySelector('.dock-ink');
+  if (!ink) {
+    ink = document.createElement('span');
+    ink.className = 'dock-ink';
+    ink.setAttribute('aria-hidden', 'true');
+    dock.prepend(ink);
+    requestAnimationFrame(() => requestAnimationFrame(() => dock.classList.add('ready')));
+  }
+  ink.hidden = index < 0;
+  dock.style.setProperty('--i', Math.max(index, 0));
+}
+
 export function confirmBox({ title, text, ok = 'Ya, lanjutkan', danger = false }) {
   let dialog = document.querySelector('.cdlg');
   if (!dialog) {

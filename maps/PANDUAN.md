@@ -50,6 +50,24 @@ Kalau migrasi dijalankan dua kali, muncul pesan `duplicate column`. Pesan itu ti
 
 Isi `ADMIN_WA` di `wrangler.toml` lalu deploy ulang supaya tombol WhatsApp ke admin muncul.
 
+## Akun demo
+
+Untuk mencoba semua fitur di situs live, buat akun demo pelanggan dan reseller:
+
+```bash
+npm.cmd run seed:demo
+```
+
+Terminal menampilkan kode kartu pelanggan, nomor WhatsApp reseller, dan PIN keduanya. PIN dibuat acak dan hanya tampil sekali. Admin memakai kata sandi admin yang sekarang. Pelanggan demo bertanda "Akun demo" dan tidak ikut dihitung di statistik admin.
+
+Hapus semua data demo sebelum publish:
+
+```bash
+npm.cmd run demo:hapus
+```
+
+Yang terhapus hanya bisnis demo, reseller demo, dan kartu di batch "Akun demo TapUlas (seed-demo)". Data pelanggan sungguhan tidak tersentuh.
+
 ## Menjalankan di komputer
 
 Butuh Node.js. Perintah awal hanya sekali:
@@ -173,7 +191,8 @@ Tujuan kartu yang diganti menghapus angka Before lama, karena tempatnya sudah be
 ## Sebelum menjual ke publik
 
 - Tambahkan Syarat Layanan dan Kebijakan Privasi. Aplikasi menyimpan pesan dan kontak pelanggan.
-- Harga Rp99.000 dan Rp49.000 di halaman depan hanya usulan. Ubah di `public/pages/home.html`.
+- Harga di halaman depan: kartu Rp50.000, Pro Rp49.000 per bulan atau Rp499.000 per tahun, bundling Rp529.000. Ubah di `public/pages/home.html`.
+- Jalankan `npm.cmd run demo:hapus` bila akun demo masih ada.
 - Uji dengan kartu NFC fisik dan link Google Maps bisnis sungguhan.
 
 Paket gratis Cloudflare punya batas CPU per permintaan, jadi PIN memakai `PBKDF2_ITER = "10000"`. Kalau pindah ke Workers Paid, naikkan ke `100000` di `wrangler.toml`. PIN lama tetap berlaku. Cek batas kuota terbaru di halaman harga Cloudflare.

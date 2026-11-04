@@ -1,4 +1,4 @@
-import { api, bindForm, codeChip, confirmBox, copyCode, esc, formatDate, groupCode, icon, toast } from '/js/common.js';
+import { api, bindForm, codeChip, confirmBox, copyCode, esc, formatDate, groupCode, icon, moveDock, toast } from '/js/common.js';
 import { activationTicket, attachPlaceSearch, buyerFormFields, destinationNote, pinTicket, showResult } from '/js/sales.js';
 
 const root = document.getElementById('reseller');
@@ -173,6 +173,7 @@ function render() {
     if (button.dataset.tab === tab) button.setAttribute('aria-current', 'page');
     else button.removeAttribute('aria-current');
   });
+  moveDock(dock);
   const views = { aktivasi: aktivasiView, stok: stokView, riwayat: riwayatView, akun: akunView };
   root.innerHTML = `<div class="topbar page-top"><h1>${TITLES[tab]}</h1>${tab === 'akun' ? '<button class="btn btn-small" id="logout">Keluar</button>' : ''}</div>${views[tab]()}`;
   ({ aktivasi: bindAktivasi, riwayat: bindRiwayat, akun: bindAkun })[tab]?.();

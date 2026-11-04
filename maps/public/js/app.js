@@ -1,4 +1,4 @@
-import { api, bindForm, esc, formatDate, icon, toast, waUrl } from '/js/common.js';
+import { api, bindForm, esc, formatDate, icon, moveDock, toast, waUrl } from '/js/common.js';
 
 const view = document.getElementById('view');
 const dock = document.querySelector('.dock');
@@ -392,6 +392,7 @@ async function render() {
     if (button.dataset.tab === tab) button.setAttribute('aria-current', 'page');
     else button.removeAttribute('aria-current');
   });
+  moveDock(dock);
   try {
     if (tab === 'beranda') renderBeranda();
     if (tab === 'masukan') await renderMasukan();

@@ -139,7 +139,9 @@ button { cursor: pointer; }
 .plan ul { display: grid; gap: 10px; margin-top: 4px; padding-top: 16px; border-top: 1px solid var(--line); font-size: 14px; font-weight: 500; }
 .plan li { display: grid; grid-template-columns: 20px minmax(0, 1fr); gap: 10px; }
 .plan li .i { width: 20px; height: 20px; padding: 3px; border-radius: 6px; background: var(--blue); color: #fff; }
-.plan-btn { display: flex; align-items: center; justify-content: center; gap: 6px; min-height: 48px; margin-top: 8px; border-radius: 99px; background: var(--blue); color: #fff; font-weight: 700; text-decoration: none; }
+.plan-btn { display: flex; align-items: center; justify-content: center; gap: 6px; min-height: 48px; margin-top: 8px; border-radius: 99px; background: var(--blue); color: #fff; font-weight: 700; text-decoration: none; transition: transform .16s var(--ease), filter .16s, box-shadow .16s; }
+.plan-btn:active { transform: scale(.96); filter: brightness(.9); box-shadow: inset 0 3px 8px #0000002e; }
+.plan-btn .i { transition: transform .2s var(--ease); }
 .plan-btn .i { width: 16px; height: 16px; transform: rotate(180deg); }
 .plan-note { color: var(--ink-2); font-size: 13px; text-align: center; }
 /* Tab Bulanan/Tahunan menempel di kartu Pro, sama seperti tab Cara kerja/Paket. */
@@ -170,11 +172,11 @@ button { cursor: pointer; }
 .plan-bundle { background: #4ade80; color: var(--ink); box-shadow: 0 20px 32px -22px #0f6b3066; }
 .plan-bundle .plan-icon { background: #fff; color: var(--blue); }
 .plan-bundle .price, .plan-bundle .plan-desc, .plan-bundle .plan-note, .plan-bundle .price s { color: var(--ink); }
-.plan-bundle .save { background: var(--ink); color: #4ade80; }
+.plan-bundle .save { background: var(--yellow); color: var(--ink); }
 .plan-bundle ul { border-top-color: #1b23413d; }
 .plan-bundle li .i { background: var(--ink); color: #4ade80; }
 .plan-bundle .plan-btn { background: var(--ink); color: #fff; }
-.best { justify-self: start; display: inline-flex; align-items: center; gap: 6px; padding: 4px 12px; border-radius: 99px; background: var(--ink); color: #fff; font-size: 12px; font-weight: 700; white-space: nowrap; }
+.best { justify-self: start; display: inline-flex; align-items: center; gap: 6px; padding: 4px 12px; border-radius: 99px; background: var(--yellow); color: var(--ink); font-size: 12px; font-weight: 700; white-space: nowrap; }
 .plan-pro .plan-icon { background: #fff; }
 .plan-pro .price, .plan-pro .price b, .plan-pro .plan-desc, .plan-pro .plan-note { color: #fff; }
 .plan-pro ul { border-top-color: #ffffff59; }
@@ -302,6 +304,7 @@ html:has(.dlg[open]) { overflow: hidden; }
   .pill-link:hover { background: var(--yellow); color: var(--ink); }
   .action:hover span { transform: translateY(-3px); }
   .plan-btn:hover, .go:hover { filter: brightness(1.1); }
+  .plan-btn:hover .i { transform: rotate(180deg) translateX(-3px); }
   .join-btns > *:hover { background: #fff; border-color: #fff; color: var(--blue-deep); }
   .dlg-close:hover { background: var(--ink); color: #fff; }
   .choice:hover { background: #e2e9f7; }
