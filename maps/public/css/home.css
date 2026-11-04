@@ -59,31 +59,32 @@ button { cursor: pointer; }
 .lede { font-size: 15px; }
 
 /* Mockup akrilik: miring dengan transform 2D (teks dan QR tetap tajam di semua ponsel),
-   tebal pelat dari tumpukan lapisan yang digeser ke kanan bawah, lalu kilau kaca di atasnya. */
+   tebal pelat tipis dari tumpukan lapisan yang digeser ke kanan bawah, lalu kilau kaca di atasnya. */
 .mock { position: relative; width: min(84%, 372px); margin: 32px auto 52px; }
 .mock::after { content: ''; position: absolute; left: 8%; right: -4%; bottom: -34px; height: 40px; border-radius: 50%; background: #041a4d; opacity: .6; filter: blur(16px); }
-.plate { position: relative; z-index: 1; aspect-ratio: 1; transform: matrix(.94, -.08, .05, .99, 0, 0); animation: settle 1s var(--ease) backwards; }
+.plate { --fold: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' preserveAspectRatio='none'%3E%3Cpath d='M0 16Q0 9.8 6 9.8H31C34 9.8 35.5 9 37 7.5L41.5 2.5C43 .8 44.5 0 47 0H94Q100 0 100 6V94Q100 100 94 100H6Q0 100 0 94Z'/%3E%3C/svg%3E"); position: relative; z-index: 1; aspect-ratio: 1; transform: matrix(.94, -.08, .05, .99, 0, 0); filter: drop-shadow(12px 20px 22px #041a4d66); animation: settle 1s var(--ease) backwards; }
 @keyframes settle { from { opacity: 0; transform: matrix(.86, -.16, .1, .97, 0, 18); } }
-.plate i { position: absolute; inset: 0; border-radius: 26px; background: #ffffff1f; }
-.plate i:nth-child(1) { transform: translate(11.9px, 14.7px); background: #ffffff40; box-shadow: 18px 30px 44px -6px #041a4d8c; }
-.plate i:nth-child(2) { transform: translate(10.6px, 13.1px); }
-.plate i:nth-child(3) { transform: translate(9.3px, 11.6px); }
-.plate i:nth-child(4) { transform: translate(8.1px, 10.0px); }
-.plate i:nth-child(5) { transform: translate(6.8px, 8.4px); }
-.plate i:nth-child(6) { transform: translate(5.5px, 6.8px); }
-.plate i:nth-child(7) { transform: translate(4.3px, 5.3px); }
-.plate i:nth-child(8) { transform: translate(3.0px, 3.7px); }
-.plate i:nth-child(9) { transform: translate(1.7px, 2.1px); }
-.plate i:nth-child(10) { transform: translate(0.8px, 1.1px); }
-.rim { position: absolute; inset: 0; border-radius: 26px; background: linear-gradient(135deg, #ffffff73 0, #ffffff26 42%, #ffffff14 68%, #ffffff4d 100%); box-shadow: inset 0 0 0 1.5px #ffffffd9, inset 3px 3px 5px #ffffffb3, inset -4px -4px 10px #ffffff40; }
-.face { position: absolute; inset: 5.5%; overflow: hidden; border-radius: 14px; background: #fff; box-shadow: 0 2px 8px #041a4d40; }
+/* Bentuk folder kartu (tab di kanan atas) dipakai semua lapisan, jadi tepi akrilik ikut bentuknya. */
+.plate i, .face, .gloss, .shine { -webkit-mask: var(--fold) 0 0 / 100% 100% no-repeat; mask: var(--fold) 0 0 / 100% 100% no-repeat; }
+.plate i { position: absolute; inset: 0; background: #c9d6ef; }
+.plate i:nth-child(odd) { background: #dfe7f7; }
+.plate i:nth-child(1) { transform: translate(5.95px, 7.35px); }
+.plate i:nth-child(2) { transform: translate(5.10px, 6.30px); }
+.plate i:nth-child(3) { transform: translate(4.25px, 5.25px); }
+.plate i:nth-child(4) { transform: translate(3.40px, 4.20px); }
+.plate i:nth-child(5) { transform: translate(2.55px, 3.15px); }
+.plate i:nth-child(6) { transform: translate(1.70px, 2.10px); }
+.plate i:nth-child(7) { transform: translate(0.85px, 1.05px); }
+.rim { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; pointer-events: none; }
+.rim path { fill: none; stroke: #ffffffe6; stroke-width: 1.5px; }
+.face { position: absolute; inset: 0; overflow: hidden; background: #fff; }
 .print { display: block; width: 100%; height: 100%; }
 /* Kilau akrilik: pantulan diagonal tetap ditambah satu kilatan yang menyapu saat halaman dibuka. */
-.gloss { position: absolute; inset: 0; border-radius: 26px; pointer-events: none;
+.gloss { position: absolute; inset: 0; pointer-events: none;
   background:
     linear-gradient(180deg, #ffffff73 0, #fff0 6%),
     linear-gradient(118deg, #fff0 20%, #ffffff6b 28%, #ffffff2e 34%, #fff0 42%, #fff0 61%, #ffffff33 66%, #fff0 71%); }
-.shine { position: absolute; inset: 0; overflow: hidden; border-radius: 26px; pointer-events: none; }
+.shine { position: absolute; inset: 0; overflow: hidden; pointer-events: none; }
 .shine::before { content: ''; position: absolute; top: -20%; bottom: -20%; left: -60%; width: 36%; background: linear-gradient(100deg, #fff0, #ffffffbf 50%, #fff0); transform: skewX(-18deg); animation: shine 1.6s .9s var(--ease) both; }
 @keyframes shine { from { left: -60%; } to { left: 130%; } }
 

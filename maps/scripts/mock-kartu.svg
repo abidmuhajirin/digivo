@@ -1,5 +1,5 @@
-<!-- Sumber gambar public/kartu-mock.webp di halaman depan. Simbol diambil dari /icons.svg dan huruf Archivo, jadi dirender lewat browser di situs lokal. -->
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 1200" width="1200" height="1200">
+<!-- Sumber gambar public/kartu-mock.webp di halaman depan. viewBox dipotong 1,1x supaya tepi putih setipis kartu asli. Simbol diambil dari /icons.svg dan huruf Archivo, jadi dirender lewat browser di situs lokal. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="54.5 54.5 1091 1091" width="1200" height="1200">
 <style>text{font-family:Archivo,sans-serif}.p-title{font-size:58px;font-weight:800;font-stretch:100%;letter-spacing:-1px;fill:#111}.p-code{font-size:32px;font-weight:500;letter-spacing:3px;fill:#555}.p-nfc{font-size:25px;font-weight:800;fill:#111}.p-or{font-size:38px;font-weight:500;fill:#fff}.p-label{font-size:42px;font-weight:800;font-stretch:112%;fill:#fff}.p-power{font-size:24px;fill:#fff}.p-power tspan{font-weight:800}</style>
   <defs>
     <clipPath id="fold"><path d="M107 605Q107 535 177 535H352C378 535 392 527 410 511L466 457C487 437 500 428 528 428H1005Q1075 428 1075 498V1005Q1075 1075 1005 1075H177Q107 1075 107 1005Z"/></clipPath>
