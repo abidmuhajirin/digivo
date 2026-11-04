@@ -1,7 +1,7 @@
 // Membuat akun demo pelanggan dan reseller di database Cloudflare, lalu menampilkan PIN-nya di terminal.
 // Pakai: npm run seed:demo  (produksi)   atau   node scripts/seed-demo.js --local  (database lokal)
 // Hapus lagi dengan: npm run demo:hapus
-import { execFileSync } from 'node:child_process';
+import { execFileSync, execSync } from 'node:child_process';
 import { mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { randomCode } from '../src/db.js';
 import { hashPin, randomPin } from '../src/security.js';
@@ -18,12 +18,10 @@ const now = Date.now();
 const quote = (value) => `'${String(value).replaceAll("'", "''")}'`;
 const wrangler = (args) => execFileSync(process.platform === 'win32' ? 'npx.cmd' : 'npx', ['wrangler', 'd1', 'execute', DB, target, ...args], { encoding: 'utf8', shell: process.platform === 'win32' });
 
-// Query ditulis ke file: di Windows npx.cmd berjalan lewat shell yang memecah argumen berspasi.
-mkdirSync('.wrangler', { recursive: true });
-const checkFile = '.wrangler/seed-demo-cek.sql';
-writeFileSync(checkFile, `SELECT (SELECT COUNT(*) FROM businesses WHERE name = ${quote(DEMO_NAME)}) AS b, (SELECT COUNT(*) FROM resellers WHERE whatsapp = ${quote(DEMO_WA)}) AS r, (SELECT COUNT(*) FROM batches WHERE note = ${quote(DEMO_BATCH)}) AS k;`);
-const existing = JSON.parse(wrangler(['--json', `--file=${checkFile}`]));
-rmSync(checkFile, { force: true });
+// Pengecekan memakai --command: untuk database produksi, --file hanya membalas ringkasan unggah, bukan baris data.
+// SQL dibungkus tanda kutip ganda supaya shell Windows tidak memecahnya di setiap spasi.
+const checkSql = `SELECT (SELECT COUNT(*) FROM businesses WHERE name = ${quote(DEMO_NAME)}) AS b, (SELECT COUNT(*) FROM resellers WHERE whatsapp = ${quote(DEMO_WA)}) AS r, (SELECT COUNT(*) FROM batches WHERE note = ${quote(DEMO_BATCH)}) AS k`;
+const existing = JSON.parse(execSync(`npx wrangler d1 execute ${DB} ${target} --json --command "${checkSql}"`, { encoding: 'utf8' }));
 const found = existing[0].results[0];
 if (found.b || found.r || found.k) {
   console.log('Akun demo sudah ada. Jalankan "npm run demo:hapus" dulu bila ingin membuat ulang dengan PIN baru.');
