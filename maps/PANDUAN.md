@@ -191,7 +191,7 @@ Tujuan kartu yang diganti menghapus angka Before lama, karena tempatnya sudah be
 ## Sebelum menjual ke publik
 
 - Tambahkan Syarat Layanan dan Kebijakan Privasi. Aplikasi menyimpan pesan dan kontak pelanggan.
-- Harga di halaman depan: kartu Rp50.000, Pro Rp49.000 per bulan atau Rp499.000 per tahun, bundling Rp529.000. Ubah di `public/pages/home.html`.
+- Harga di halaman depan: kartu Rp50.000, Pro Rp29.000 per bulan atau Rp199.000 per tahun, bundling Rp229.000. Ubah di `public/pages/home.html`.
 - Jalankan `npm.cmd run demo:hapus` bila akun demo masih ada.
 - Uji dengan kartu NFC fisik dan link Google Maps bisnis sungguhan.
 
