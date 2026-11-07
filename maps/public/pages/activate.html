@@ -19,13 +19,23 @@
     <h1 class="grow">Aktivasi kartu</h1>
   </div>
 
-  <form id="activate" class="stack" autocomplete="off">
-    <section class="panel stack-sm">
-      <h2>Kode dari lembar aktivasi</h2>
-      <label class="field"><span>Kode kartu</span>
-        <input class="code" name="code" maxlength="10" required placeholder="7 karakter"></label>
-      <label class="field"><span>Kode aktivasi</span>
-        <input class="code" name="activationCode" maxlength="12" required placeholder="XXXX-XXXX"></label>
+  <!-- Langkah 1: hanya kode. Isian bisnis (yang memakai kuota Google) baru muncul setelah kodenya cocok. -->
+  <form id="check" class="panel stack-sm" autocomplete="off">
+    <h2>Kode dari lembar aktivasi</h2>
+    <label class="field"><span>Kode kartu</span>
+      <input class="code" name="code" maxlength="10" required placeholder="7 karakter"></label>
+    <label class="field"><span>Kode aktivasi</span>
+      <input class="code" name="activationCode" maxlength="12" required placeholder="XXXX-XXXX"></label>
+    <p class="form-msg" role="alert"></p>
+    <button class="cta" type="submit">Aktifkan kartu</button>
+  </form>
+
+  <form id="activate" class="stack" autocomplete="off" hidden>
+    <input type="hidden" name="code">
+    <input type="hidden" name="activationCode">
+    <section class="panel verified">
+      <p class="note"><svg class="i" aria-hidden="true"><use href="/icons.svg#check"/></svg><span>Kartu <b id="verified-code"></b> siap diaktifkan.</span></p>
+      <button class="text-btn" type="button" id="change-code">Ganti kode</button>
     </section>
 
     <section class="panel stack-sm">
@@ -38,7 +48,7 @@
       <div class="note" id="picked" hidden></div>
 
       <div id="link-box" class="stack-sm">
-        <label class="field"><span>Link Google bisnis</span>
+        <label class="field"><span>Link Google Maps</span>
           <input name="link" inputmode="url" placeholder="Tempel link dari Google Maps atau Profil Bisnis">
         </label>
         <p class="note" id="link-note" hidden></p>
@@ -70,7 +80,7 @@
     </section>
 
     <p class="form-msg" role="alert"></p>
-    <button class="cta" type="submit">Aktifkan kartu</button>
+    <button class="cta" type="submit">Selesaikan aktivasi</button>
   </form>
 
   <section id="done" class="stack" hidden></section>

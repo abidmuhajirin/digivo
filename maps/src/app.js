@@ -445,10 +445,42 @@ export function createApp() {
     adminWa: c.env.ADMIN_WA ?? '',
   }));
 
-  app.get('/api/places', async (c) => {
+  // Kartu kosong lolos bila kode kartu dan kode aktivasinya cocok. Dipakai langkah 1 aktivasi.
+  const blankCard = async (c, { code, activationCode }) => {
+    const card = await cardByCode(c, code);
+    if (!card || !await safeEqual(card.activation_code, normalizeCode(activationCode))) {
+      return { error: c.json({ error: 'Kode kartu atau kode aktivasi tidak cocok. Periksa lembar aktivasi.' }, 403) };
+    }
+    if (card.business_id) return { error: c.json({ error: 'Kartu ini sudah aktif. Masuk ke halaman kelola.', code: card.code }, 409) };
+    return { card };
+  };
+
+  // Pencarian bisnis dan pembacaan link memakai kuota Google, jadi hanya untuk admin, reseller,
+  // pemilik yang masuk, atau pemegang lembar aktivasi kartu yang belum aktif.
+  const mayUseGoogle = async (c, input) => {
+    const db = c.env.DB;
+    if (await readSession(db, getCookie(c, ADMIN_COOKIE), 'admin')) return null;
+    const reseller = await readSession(db, getCookie(c, RESELLER_COOKIE), 'reseller');
+    if (reseller && (await resellerById(c, reseller.business_id))?.active) return null;
+    if (await readSession(db, getCookie(c, OWNER_COOKIE), 'owner')) return null;
+    if (!input.code || !input.activationCode) return c.json({ error: 'Masukkan kode kartu dan kode aktivasi dulu.' }, 403);
+    return (await blankCard(c, input)).error ?? null;
+  };
+
+  app.post('/api/activate/check', async (c) => {
+    const blocked = await tooMany(c, 'activate-check', 15, 15 * 60_000);
+    if (blocked) return blocked;
+    const { card, error } = await blankCard(c, await body(c));
+    return error ?? c.json({ ok: true, code: card.code });
+  });
+
+  app.post('/api/places', async (c) => {
     const blocked = await tooMany(c, 'places', 30, 10 * 60_000);
     if (blocked) return blocked;
-    const query = cleanText(c.req.query('q'), 120);
+    const input = await body(c);
+    const denied = await mayUseGoogle(c, input);
+    if (denied) return denied;
+    const query = cleanText(input.q, 120);
     if (!c.env.GOOGLE_PLACES_API_KEY) return c.json({ error: 'Pencarian belum aktif. Tempel link Google Maps.' }, 503);
     if (query.length < 3) return c.json({ places: [] });
     try {
@@ -463,8 +495,10 @@ export function createApp() {
   app.post('/api/resolve-link', async (c) => {
     const blocked = await tooMany(c, 'resolve', 30, 10 * 60_000);
     if (blocked) return blocked;
-    const { link } = await body(c);
-    const result = await destination(c, { link });
+    const input = await body(c);
+    const denied = await mayUseGoogle(c, input);
+    if (denied) return denied;
+    const result = await destination(c, { link: input.link });
     return c.json(result, result.ok ? 200 : 400);
   });
 
@@ -472,12 +506,9 @@ export function createApp() {
     const blocked = await tooMany(c, 'activate', 10, 15 * 60_000);
     if (blocked) return blocked;
     const input = await body(c);
-    const { code, activationCode, name, link, placeId, pin } = input;
-    const card = await cardByCode(c, code);
-    if (!card || !await safeEqual(card.activation_code, normalizeCode(activationCode))) {
-      return c.json({ error: 'Kode kartu atau kode aktivasi tidak cocok. Periksa lembar aktivasi.' }, 403);
-    }
-    if (card.business_id) return c.json({ error: 'Kartu ini sudah aktif. Masuk ke halaman kelola.' }, 409);
+    const { name, link, placeId, pin } = input;
+    const { card, error } = await blankCard(c, input);
+    if (error) return error;
 
     const cleanName = cleanText(name, 80);
     if (cleanName.length < 2) return c.json({ error: 'Isi nama bisnis.' }, 400);

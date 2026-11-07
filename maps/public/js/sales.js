@@ -68,7 +68,7 @@ export async function attachPlaceSearch(form) {
     if (query.length < 3) { list.hidden = true; return; }
     timer = setTimeout(async () => {
       try {
-        ({ places } = await api(`/api/places?q=${encodeURIComponent(query)}`));
+        ({ places } = await api('/api/places', { method: 'POST', body: { q: query } }));
         list.innerHTML = places.map((place, i) => `
           <li><button type="button" data-i="${i}">${esc(place.name)}<small>${esc(place.address)}</small></button></li>`).join('');
         list.hidden = !places.length;

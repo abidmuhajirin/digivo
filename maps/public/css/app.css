@@ -529,3 +529,9 @@ input[type='number']::-webkit-inner-spin-button, input[type='number']::-webkit-o
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { transition-duration: .01ms !important; animation: none !important; }
 }
+
+/* Aktivasi langkah 2: ringkasan kode yang sudah cocok. */
+.verified { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding-block: 14px; }
+.panel.verified > * + * { margin-top: 0; }
+.verified .note { color: var(--ink); align-items: center; }
+.verified .text-btn { flex: none; min-height: 44px; }

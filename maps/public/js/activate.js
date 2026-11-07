@@ -1,5 +1,6 @@
 import { api, bindForm, esc, icon } from '/js/common.js';
 
+const check = document.getElementById('check');
 const form = document.getElementById('activate');
 const suggest = document.getElementById('suggest');
 const picked = document.getElementById('picked');
@@ -9,13 +10,38 @@ const nameHint = document.getElementById('name-hint');
 let placeId = null;
 
 const codeFromPath = location.pathname.split('/')[2];
-if (codeFromPath) form.code.value = codeFromPath;
+if (codeFromPath) check.code.value = codeFromPath;
 // QR di lembar aktivasi membawa kodenya di fragmen, jadi pembeli online tidak perlu mengetik.
 if (location.hash.length > 1) {
-  form.activationCode.value = location.hash.slice(1);
-  form.activationCode.dispatchEvent(new Event('input', { bubbles: true }));
+  check.activationCode.value = location.hash.slice(1);
+  check.activationCode.dispatchEvent(new Event('input', { bubbles: true }));
 }
-(codeFromPath ? form.activationCode : form.code).focus();
+(codeFromPath ? check.activationCode : check.code).focus();
+
+// Kode kartu dan kode aktivasi ikut di setiap panggilan yang memakai kuota Google.
+const codes = () => ({ code: form.code.value, activationCode: form.activationCode.value });
+
+// Langkah 1: kode dicek dulu. Isian bisnis dan PIN baru tampil setelah kodenya cocok.
+bindForm(check, async (values, message) => {
+  try {
+    const { code } = await api('/api/activate/check', { method: 'POST', body: values });
+    form.code.value = code;
+    form.activationCode.value = values.activationCode;
+    document.getElementById('verified-code').textContent = code;
+    check.hidden = true;
+    form.hidden = false;
+    form.name.focus();
+  } catch (error) {
+    if (error.status !== 409) throw error;
+    message.innerHTML = `${esc(error.message)} <a class="text-link" href="/kelola?kartu=${encodeURIComponent(values.code.toUpperCase())}">Masuk</a>`;
+  }
+});
+
+document.getElementById('change-code').addEventListener('click', () => {
+  form.hidden = true;
+  check.hidden = false;
+  check.code.focus();
+});
 
 const config = await api('/api/config').catch(() => ({ placesEnabled: false }));
 
@@ -31,7 +57,7 @@ if (config.placesEnabled) {
     if (query.length < 3) { suggest.hidden = true; return; }
     timer = setTimeout(async () => {
       try {
-        const { places } = await api(`/api/places?q=${encodeURIComponent(query)}`);
+        const { places } = await api('/api/places', { method: 'POST', body: { q: query, ...codes() } });
         suggest.innerHTML = places.map((place, i) => `
           <li><button type="button" data-i="${i}">${esc(place.name)}<small>${esc(place.address)}</small></button></li>`).join('');
         suggest.hidden = !places.length;
@@ -57,7 +83,7 @@ form.link.addEventListener('change', async () => {
   linkNote.hidden = true;
   if (!form.link.value.trim()) return;
   try {
-    const result = await api('/api/resolve-link', { method: 'POST', body: { link: form.link.value } });
+    const result = await api('/api/resolve-link', { method: 'POST', body: { link: form.link.value, ...codes() } });
     linkNote.classList.toggle('warn', result.kind !== 'review');
     linkNote.innerHTML = result.kind === 'review'
       ? `${icon('check')}<span>Link langsung ke form ulasan.</span>`
@@ -71,7 +97,7 @@ form.link.addEventListener('change', async () => {
 });
 
 bindForm(form, async (values) => {
-  if (!placeId && !values.link.trim()) throw new Error('Pilih bisnis dari hasil pencarian atau tempel link Google.');
+  if (!placeId && !values.link.trim()) throw new Error('Pilih bisnis dari hasil pencarian atau tempel link Google Maps.');
   const result = await api('/api/activate', { method: 'POST', body: { ...values, placeId } });
   form.hidden = true;
   const done = document.getElementById('done');

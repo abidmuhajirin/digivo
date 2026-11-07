@@ -524,10 +524,26 @@ test('panggilan Google tercatat, angka awal manual tetap, data Google lama dibua
   const used = (kind) => Number(db.sqlite.prepare('SELECT value FROM settings WHERE key = ?').get(`google_calls:${month}:${kind}`)?.value ?? 0);
   const [search0, details0] = [used('search'), used('details')];
 
-  assert.equal((await keyed('/api/places?q=sate%20uji')).status, 200);
-  assert.equal(used('search'), search0 + 1);
-
   const card = cards[22];
+  // Kuota Google hanya terpakai oleh pemegang kode kartu kosong yang cocok, admin, reseller, atau pemilik.
+  const places = (body, cookie) => keyed('/api/places', { method: 'POST', body, cookie });
+  assert.equal((await places({ q: 'sate uji' })).status, 403);
+  assert.equal((await places({ q: 'sate uji', code: card.code, activationCode: 'SALAH123' })).status, 403);
+  assert.equal((await keyed('/api/resolve-link', { method: 'POST', body: { link: REVIEW } })).status, 403);
+  assert.equal(used('search'), search0, 'tanpa kode tidak memakai kuota');
+  assert.equal((await places({ q: 'sate uji', code: card.code, activationCode: card.activation_code })).status, 200);
+  assert.equal(used('search'), search0 + 1);
+  assert.equal((await places({ q: 'sate uji' }, await adminLogin())).status, 200);
+  assert.equal((await keyed('/api/resolve-link', { method: 'POST', body: { link: REVIEW, code: card.code, activationCode: card.activation_code } })).status, 200);
+
+  // Langkah 1 aktivasi: kode dicek tanpa membuat apa pun.
+  const checkCode = (body) => call('/api/activate/check', { method: 'POST', body });
+  assert.equal((await checkCode({ code: card.code, activationCode: 'SALAH123' })).status, 403);
+  const ok = await checkCode({ code: card.code.toLowerCase(), activationCode: card.activation_code });
+  assert.equal(ok.status, 200);
+  assert.equal((await ok.json()).code, card.code);
+  assert.equal(db.sqlite.prepare('SELECT business_id FROM cards WHERE code = ?').get(card.code).business_id, null);
+
   const res = await keyed('/api/activate', {
     method: 'POST',
     body: {
@@ -536,6 +552,8 @@ test('panggilan Google tercatat, angka awal manual tetap, data Google lama dibua
     },
   });
   assert.equal(res.status, 200);
+  assert.equal((await checkCode({ code: card.code, activationCode: card.activation_code })).status, 409, 'kartu aktif tidak bisa dicek ulang');
+  assert.equal((await places({ q: 'sate uji', code: card.code, activationCode: card.activation_code }, 'x=y')).status, 409);
   assert.equal(used('details'), details0 + 1);
   const { business_id: id } = db.sqlite.prepare('SELECT business_id FROM cards WHERE code = ?').get(card.code);
   const rows = () => db.sqlite.prepare('SELECT review_count, source FROM review_snapshots WHERE business_id = ? ORDER BY taken_at, id').all(id);
@@ -552,7 +570,7 @@ test('panggilan Google tercatat, angka awal manual tetap, data Google lama dibua
 
   const admin = (await keyed('/api/admin/login', { method: 'POST', body: { password: 'sandi-uji' } })).headers.get('set-cookie').split(';')[0];
   const overview = await (await keyed('/api/admin/overview', { cookie: admin })).json();
-  assert.deepEqual(overview.google, { enabled: true, month, details: details0 + 2, search: search0 + 1 });
+  assert.deepEqual(overview.google, { enabled: true, month, details: details0 + 2, search: search0 + 2 });
   assert.equal(typeof overview.tapsToday, 'number');
   assert.ok(Array.isArray(overview.batchStock));
 });
