@@ -568,3 +568,9 @@ test('permintaan ubah data dari situs lain ditolak', async () => {
   // Dari situs sendiri lolos penjaga (bisa 200 atau 429 karena batas percobaan tes sebelumnya).
   assert.notEqual((await send({ Origin: 'http://test', 'Sec-Fetch-Site': 'same-origin' })).status, 403);
 });
+
+test('PIN bebas dipilih asal 6 angka', async () => {
+  const { pinProblem } = await import('../src/security.js');
+  for (const pin of ['000000', '111111', '123456', '654321', '482915']) assert.equal(pinProblem(pin), null, pin);
+  for (const pin of ['12345', '1234567', 'abcdef', '12 456', '', undefined]) assert.equal(pinProblem(pin), 'PIN harus 6 angka.', String(pin));
+});

@@ -30,12 +30,9 @@ export async function safeEqual(a, b) {
   return sameBytes(await sha256(String(a)), await sha256(String(b)));
 }
 
+// Pemilik bebas memilih 6 angka apa pun. Tebakan beruntun tetap dihadang kunci 15 menit setelah 5 kali salah.
 export function pinProblem(pin) {
-  if (!/^\d{6}$/.test(String(pin ?? ''))) return 'PIN harus 6 angka.';
-  if (/^(\d)\1{5}$/.test(pin) || pin === '123456' || pin === '654321') {
-    return 'PIN terlalu mudah ditebak. Pilih kombinasi lain.';
-  }
-  return null;
+  return /^\d{6}$/.test(String(pin ?? '')) ? null : 'PIN harus 6 angka.';
 }
 
 export function randomPin() {
